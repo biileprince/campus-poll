@@ -8,7 +8,6 @@ The frontend application for Campus Poll, a quick polling platform that enables 
 
 - **Framework**: React 18 or 19
 - **Build Tool**: Vite
-- **Styling**: CSS3 (with CSS Modules or styled-components)
 - **Charts**: Chart.js with react-chartjs-2
 - **HTTP Client**: Axios or Fetch API
 - **Routing**: React Router v6
@@ -333,7 +332,6 @@ datasets: [{
 ### Helpful Guides
 
 - [React Hooks Guide](https://react.dev/reference/react)
-- [CSS Modules Guide](https://github.com/css-modules/css-modules)
 - [Responsive Design](https://web.dev/responsive-web-design-basics/)
 - [Accessibility (a11y)](https://www.w3.org/WAI/fundamentals/accessibility-intro/)
 
