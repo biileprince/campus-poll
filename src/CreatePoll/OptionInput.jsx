@@ -1,5 +1,5 @@
 import { X } from "lucide-react"; // Only if your UI uses Lucide icons
-import Input from "../common/Input";
+import Input from "../Common/input";
 
 export default function OptionInput({ value, onChange, onRemove, index }) {
   return (
