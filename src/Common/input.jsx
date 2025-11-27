@@ -1,6 +1,6 @@
 export default function Input({
   label,
-  placeholder,
+  placeholder = "",
   value,
   onChange,
   type = "text",
@@ -8,7 +8,11 @@ export default function Input({
 }) {
   return (
     <div className={`flex flex-col gap-1 ${className}`}>
-      {label && <label className="text-sm font-medium">{label}</label>}
+      {label && (
+        <label className="text-[13px] font-medium text-[#1F1F1F]">
+          {label}
+        </label>
+      )}
 
       <input
         type={type}
@@ -16,12 +20,21 @@ export default function Input({
         onChange={onChange}
         placeholder={placeholder}
         className="
-          border border-gray-300 
-          rounded-lg 
-          px-3 py-2 
-          outline-none 
-          focus:ring-2 focus:ring-[#5D5FEF]
+          w-full
+          border 
+          border-[#DADADA]
+          rounded-[10px]
+          px-4 
+          py-2.5
+          text-[13px]
+          text-[#1F1F1F]
+          placeholder:text-[#A0A0A0]
+          outline-none
           transition-all
+          duration-200
+          focus:border-[#5D5FEF]
+          focus:ring-2
+          focus:ring-[#5D5FEF] 
         "
       />
     </div>

@@ -3,9 +3,9 @@ export default function Card({ children, className = "" }) {
     <div
       className={`
         bg-white 
-        rounded-xl 
-        shadow-md 
-        p-4 
+        rounded-[14px] 
+        shadow-[0_2px_6px_rgba(0,0,0,0.04)] 
+        p-6
         ${className}
       `}
     >
@@ -13,3 +13,4 @@ export default function Card({ children, className = "" }) {
     </div>
   );
 }
+

@@ -1,22 +1,43 @@
-import { X } from "lucide-react"; // Only if your UI uses Lucide icons
-import Input from "../Common/input";
+import { X } from "lucide-react";
+import Input from "../Common/Input";
 
-export default function OptionInput({ value, onChange, onRemove, index }) {
+export default function OptionInput({
+  value,
+  index,
+  onChange,
+  onRemove,
+  allowRemove = true,
+}) {
   return (
     <div className="flex items-center gap-3">
+      {/* Option Number */}
+      <div className="text-[13px] font-medium text-[#5D5FEF] w-6">
+        {index + 1}.
+      </div>
+
+      {/* Option Input */}
       <Input
         value={value}
-        onChange={(e) => onChange(index, e.target.value)}
+        onChange={(e) => onChange(e.target.value)}
         placeholder={`Option ${index + 1}`}
         className="flex-1"
       />
 
-      {index > 1 && ( // Prevent removing Option 1 & 2
+      {/* Remove Button */}
+      {allowRemove && index >= 2 && (
         <button
-          onClick={() => onRemove(index)}
-          className="p-2 bg-red-100 text-red-600 rounded-lg hover:bg-red-200"
+          onClick={onRemove}
+          className="
+            p-2 
+            bg-[#FCDDEC] 
+            text-[#EF5DA8] 
+            rounded-[10px] 
+            hover:bg-[#F178B6] 
+            hover:text-white 
+            transition
+          "
         >
-          <X size={18} />
+          <X size={16} />
         </button>
       )}
     </div>

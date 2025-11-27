@@ -5,16 +5,31 @@ import Button from "./components/Common/button";
 import Loader from "./components/Common/loader";
 
 export default function TestPreview() {
-  const [options, setOptions] = useState(["", ""]);
+  // Initialize options as objects with stable ids
+  const [options, setOptions] = useState([
+    { id: 1, value: "" },
+    { id: 2, value: "" },
+  ]);
 
-  const updateOption = (index, value) => {
-    const updated = [...options];
-    updated[index] = value;
-    setOptions(updated);
+  // helper to generate a simple unique id
+  const nextId = () => Date.now() + Math.floor(Math.random() * 1000);
+
+  // update option by id
+  const updateOption = (id, value) => {
+    setOptions((prev) => prev.map((o) => (o.id === id ? { ...o, value } : o)));
   };
 
-  const removeOption = (index) => {
-    setOptions(options.filter((_, i) => i !== index));
+  // remove option by id but keep at least 2 options
+  const removeOption = (id) => {
+    setOptions((prev) => {
+      if (prev.length <= 2) return prev;
+      return prev.filter((o) => o.id !== id);
+    });
+  };
+
+  // add a new empty option
+  const addOption = () => {
+    setOptions((prev) => [...prev, { id: nextId(), value: "" }]);
   };
 
   return (
@@ -25,17 +40,20 @@ export default function TestPreview() {
         <h2 className="text-lg mb-3 font-semibold">Option Inputs</h2>
         {options.map((opt, i) => (
           <OptionInput
-            key={i}
-            value={opt}
+            key={opt.id}
+            value={opt.value}
             index={i}
-            onChange={updateOption}
-            onRemove={removeOption}
+            onChange={(val) => updateOption(opt.id, val)}
+            onRemove={() => removeOption(opt.id)}
+            allowRemove={options.length > 2}
           />
         ))}
 
-        <Button className="mt-4" onClick={() => setOptions([...options, ""])}>
-          Add Option
-        </Button>
+        <div className="mt-4 flex flex-col gap-3">
+          <Button onClick={addOption}>Add Option</Button>
+          <Button>Primary Button</Button>
+          <Button variant="secondary">Secondary Button</Button>
+        </div>
       </Card>
 
       <Card>
