@@ -27,21 +27,46 @@ export default function Button({
     `,
     secondary: `
       bg-white
-      border 
-      border-[#5D5FEF]
+      border border-[#5D5FEF]
       text-[#5D5FEF]
+      hover:bg-[#A5A6F6]/20
+    `,
+    accent: `
+      bg-[#EF5DA8]
+      text-white
+      hover:bg-[#F178B6]
+    `,
+    accentOutline: `
+      bg-white
+      border border-[#EF5DA8]
+      text-[#EF5DA8]
       hover:bg-[#FCDDEC]
     `,
+    soft: `
+      bg-[#A5A6F6]/20
+      text-[#5D5FEF]
+      hover:bg-[#A5A6F6]/40
+    `,
+    danger: `
+      bg-[#ff4d4f]
+      text-white
+      hover:bg-[#d9363e]
+    `,
+    disabled: `
+      bg-[#DADADA]
+      text-[#6B6B6B]
+      cursor-not-allowed
+    `,
   };
+
+  const styleSelected = disabled ? variants["disabled"] : variants[variant];
 
   return (
     <button
       type={type}
       onClick={onClick}
       disabled={disabled}
-      className={`${baseStyle} ${variants[variant]} ${
-        disabled ? "opacity-50 cursor-not-allowed" : ""
-      } ${className}`}
+      className={`${baseStyle} ${styleSelected} ${className}`}
     >
       {children}
     </button>

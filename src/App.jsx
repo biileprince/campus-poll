@@ -1,4 +1,4 @@
-import TestPreview from "./TestPreview";
+import TestPreview from "../TestPreview";
 
 function App() {
   return <TestPreview />;
