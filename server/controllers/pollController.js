@@ -142,3 +142,68 @@ export const getPollByVoteId = async (req, res) => {
         });
     }
 };
+
+/**
+ * Cast a vote for an option
+ * @route POST /api/vote/:optionId
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const castVote = async (req, res) => {
+    try {
+        const { optionId } = req.params;
+        const { voteId } = req.body;
+
+        // Validate request
+        if (!voteId) {
+            return res.status(400).json({
+                error: 'voteId is required',
+            });
+        }
+
+        if (!optionId) {
+            return res.status(400).json({
+                error: 'optionId is required',
+            });
+        }
+
+        // 1. Find the poll using the voteId
+        const poll = await prisma.poll.findUnique({
+            where: { voteId },
+            include: { options: true },
+        });
+
+        if (!poll) {
+            return res.status(404).json({
+                error: 'Poll not found or invalid voteId',
+            });
+        }
+
+        // 2. Ensure the selected option belongs to this poll
+        const selectedOption = poll.options.find(opt => opt.id === optionId);
+
+        if (!selectedOption) {
+            return res.status(400).json({
+                error: 'Option does not belong to this poll',
+            });
+        }
+
+        // 3. Increment the vote count with Prisma
+        const updatedOption = await prisma.option.update({
+            where: { id: optionId },
+            data: { voteCount: selectedOption.voteCount + 1 },
+        });
+
+        // 4. Send the response
+        return res.status(200).json({
+            success: true,
+            message: 'Vote recorded successfully',
+            voteCount: updatedOption.voteCount,
+        });
+    } catch (error) {
+        console.error('Error casting vote:', error);
+        return res.status(500).json({
+            error: 'Internal server error while casting vote',
+        });
+    }
+};
