@@ -1,7 +1,7 @@
 function CreatePollPage() {
   return (
-    <div>
-      <h1>Create Poll Page</h1>
+    <div className="">
+      <main className="p-6"> create poll</main>
     </div>
   );
 }
