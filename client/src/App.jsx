@@ -8,6 +8,7 @@ function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/" element={<CreatePollPage />} />
         <Route path="/create" element={<CreatePollPage />} />
         <Route path="/poll/:pollId" element={<VotePage />} />
         <Route path="/results/:pollId" element={<ResultsPage />} />
