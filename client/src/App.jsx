@@ -8,14 +8,15 @@ import HomePage from "./pages/HomePage";
 function App() {
   return (
     <BrowserRouter>
-      <Routes>        
-        <Route path="/" element={<AppLayout />} >
+      <Routes>
+        <Route path="/" element={<AppLayout />}>
           <Route index element={<HomePage />} />
           <Route path="create-poll" element={<CreatePollPage />} />
           <Route path="results" element={<ResultsPage />} />
+          <Route path="vote" element={<VotePage />} />
+          {/* <Route path="history" element={<History />} /> */}
+          {/* <Route path="settings" element={<Settings />} /> */}
         </Route>
-        <Route path="/poll/:pollId" element={<VotePage />} />
-        <Route path="/results/:pollId" element={<ResultsPage />} />
       </Routes>
     </BrowserRouter>
   );
