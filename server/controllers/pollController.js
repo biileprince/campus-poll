@@ -144,30 +144,20 @@ export const getPollByVoteId = async (req, res) => {
 };
 
 /**
- * Cast a vote for an option
+ * Cast a vote for an option (legacy endpoint)
  * @route POST /api/vote/:optionId
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 export const castVote = async (req, res) => {
     try {
         const { optionId } = req.params;
         const { voteId } = req.body;
 
-        // Validate request
-        if (!voteId) {
+        if (!voteId || !optionId) {
             return res.status(400).json({
-                error: 'voteId is required',
+                error: 'voteId and optionId are required',
             });
         }
 
-        if (!optionId) {
-            return res.status(400).json({
-                error: 'optionId is required',
-            });
-        }
-
-        // 1. Find the poll using the voteId
         const poll = await prisma.poll.findUnique({
             where: { voteId },
             include: { options: true },
@@ -179,22 +169,18 @@ export const castVote = async (req, res) => {
             });
         }
 
-        // 2. Ensure the selected option belongs to this poll
         const selectedOption = poll.options.find(opt => opt.id === optionId);
-
         if (!selectedOption) {
             return res.status(400).json({
                 error: 'Option does not belong to this poll',
             });
         }
 
-        // 3. Increment the vote count with Prisma
         const updatedOption = await prisma.option.update({
             where: { id: optionId },
             data: { voteCount: selectedOption.voteCount + 1 },
         });
 
-        // 4. Send the response
         return res.status(200).json({
             success: true,
             message: 'Vote recorded successfully',
@@ -204,6 +190,109 @@ export const castVote = async (req, res) => {
         console.error('Error casting vote:', error);
         return res.status(500).json({
             error: 'Internal server error while casting vote',
+        });
+    }
+};
+
+/**
+ * Submit a vote for a poll option (new endpoint)
+ * @route POST /api/poll/:voteId/vote
+ */
+export const submitVote = async (req, res) => {
+    try {
+        const { voteId } = req.params;
+        const { optionId } = req.body;
+
+        if (!voteId || !optionId) {
+            return res.status(400).json({
+                error: 'Vote ID and option ID are required',
+            });
+        }
+
+        const poll = await prisma.poll.findUnique({
+            where: { voteId },
+            include: { options: true },
+        });
+
+        if (!poll) {
+            return res.status(404).json({
+                error: 'Poll not found',
+            });
+        }
+
+        const option = poll.options.find(opt => opt.id === parseInt(optionId));
+        if (!option) {
+            return res.status(400).json({
+                error: 'Invalid option ID',
+            });
+        }
+
+        await prisma.option.update({
+            where: { id: parseInt(optionId) },
+            data: { voteCount: { increment: 1 } },
+        });
+
+        return res.status(200).json({ success: true });
+    } catch (error) {
+        console.error('Error submitting vote:', error);
+        return res.status(500).json({
+            error: 'Internal server error while submitting vote',
+        });
+    }
+};
+
+/**
+ * Get poll results by resultsId
+ * @route GET /api/results/:resultsId
+ */
+export const getPollResults = async (req, res) => {
+    try {
+        const { resultsId } = req.params;
+
+        if (!resultsId) {
+            return res.status(400).json({
+                error: 'Results ID is required',
+            });
+        }
+
+        const poll = await prisma.poll.findUnique({
+            where: { resultsId },
+            include: {
+                options: {
+                    select: {
+                        id: true,
+                        text: true,
+                        voteCount: true,
+                    },
+                },
+            },
+        });
+
+        if (!poll) {
+            return res.status(404).json({
+                error: 'Poll results not found',
+            });
+        }
+
+        const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+
+        const response = {
+            id: poll.id,
+            question: poll.question,
+            totalVotes,
+            options: poll.options.map(option => ({
+                id: option.id,
+                text: option.text,
+                voteCount: option.voteCount,
+                percentage: totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0,
+            })),
+        };
+
+        return res.status(200).json(response);
+    } catch (error) {
+        console.error('Error fetching poll results:', error);
+        return res.status(500).json({
+            error: 'Internal server error while fetching results',
         });
     }
 };
