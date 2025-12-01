@@ -1,20 +1,18 @@
+// NOTE: If you want routing, run: npm install react-router-dom
+// then uncomment the imports and Routes below.
+// import { BrowserRouter, Routes, Route } from "react-router-dom";
 
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import CreatePollPage from "./pages/CreatePollPage";
-import VotePage from "./pages/VotePage";
-import ResultsPage from "./pages/ResultsPage";
+import TestSharePage from "./TestSharePage.jsx";
+// import ShareLink from "./pages/ShareLink.jsx";
 
-function App() {
-  return (
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<CreatePollPage />} />
-        <Route path="/create" element={<CreatePollPage />} />
-        <Route path="/poll/:pollId" element={<VotePage />} />
-        <Route path="/results/:pollId" element={<ResultsPage />} />
-      </Routes>
-    </BrowserRouter>
-  );
+export default function App() {
+  // Temporary simple render to avoid import resolution errors while react-router-dom is not installed
+  return <TestSharePage />;
 }
 
-export default App;
+// <BrowserRouter>
+//   <Routes>
+//     <Route path="/" element={<TestSharePage />} />
+//     <Route path="/share" element={<ShareLink />} />
+//   </Routes>
+// </BrowserRouter>
