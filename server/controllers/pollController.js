@@ -144,7 +144,7 @@ export const getPollByVoteId = async (req, res) => {
 };
 
 /**
- * Cast a vote for an option (legacy endpoint)
+ * Cast a vote for an option 
  * @route POST /api/vote/:optionId
  */
 export const castVote = async (req, res) => {
@@ -194,52 +194,6 @@ export const castVote = async (req, res) => {
     }
 };
 
-/**
- * Submit a vote for a poll option (new endpoint)
- * @route POST /api/poll/:voteId/vote
- */
-export const submitVote = async (req, res) => {
-    try {
-        const { voteId } = req.params;
-        const { optionId } = req.body;
-
-        if (!voteId || !optionId) {
-            return res.status(400).json({
-                error: 'Vote ID and option ID are required',
-            });
-        }
-
-        const poll = await prisma.poll.findUnique({
-            where: { voteId },
-            include: { options: true },
-        });
-
-        if (!poll) {
-            return res.status(404).json({
-                error: 'Poll not found',
-            });
-        }
-
-        const option = poll.options.find(opt => opt.id === parseInt(optionId));
-        if (!option) {
-            return res.status(400).json({
-                error: 'Invalid option ID',
-            });
-        }
-
-        await prisma.option.update({
-            where: { id: parseInt(optionId) },
-            data: { voteCount: { increment: 1 } },
-        });
-
-        return res.status(200).json({ success: true });
-    } catch (error) {
-        console.error('Error submitting vote:', error);
-        return res.status(500).json({
-            error: 'Internal server error while submitting vote',
-        });
-    }
-};
 
 /**
  * Get poll results by resultsId
