@@ -250,3 +250,127 @@ export const getPollResults = async (req, res) => {
         });
     }
 };
+
+/**
+ * Update an existing poll
+ * @route PUT /api/polls/:resultsId
+ */
+export const updatePoll = async (req, res) => {
+    try {
+        const { resultsId } = req.params;
+        const { question, options } = req.body;
+
+        // Find the poll by resultsId
+        const existingPoll = await prisma.poll.findUnique({
+            where: { resultsId },
+            include: { options: true },
+        });
+
+        if (!existingPoll) {
+            return res.status(404).json({
+                error: 'Poll not found',
+            });
+        }
+
+        // Check if poll has votes - only allow editing if no votes cast
+        const totalVotes = existingPoll.options.reduce((sum, opt) => sum + opt.voteCount, 0);
+        if (totalVotes > 0) {
+            return res.status(403).json({
+                error: 'Cannot edit poll that has received votes',
+            });
+        }
+
+        // Validate new data if provided
+        const updatedQuestion = question ? question.trim() : existingPoll.question;
+
+        let updatedOptions = existingPoll.options;
+        if (options && Array.isArray(options)) {
+            const validOptions = options.filter(opt => opt && opt.trim().length > 0);
+
+            // Check for duplicates
+            const uniqueOptions = [...new Set(validOptions.map(opt => opt.trim().toLowerCase()))];
+            if (uniqueOptions.length !== validOptions.length) {
+                return res.status(400).json({
+                    error: 'Duplicate options are not allowed',
+                });
+            }
+
+            // Delete old options and create new ones
+            await prisma.option.deleteMany({
+                where: { pollId: existingPoll.id },
+            });
+
+            updatedOptions = validOptions.map(text => ({ text: text.trim() }));
+        }
+
+        // Update poll
+        const updatedPoll = await prisma.poll.update({
+            where: { id: existingPoll.id },
+            data: {
+                question: updatedQuestion,
+                ...(options && {
+                    options: {
+                        create: updatedOptions,
+                    },
+                }),
+            },
+            include: {
+                options: true,
+            },
+        });
+
+        return res.status(200).json({
+            id: updatedPoll.id,
+            voteId: updatedPoll.voteId,
+            resultsId: updatedPoll.resultsId,
+            question: updatedPoll.question,
+            options: updatedPoll.options.map(opt => ({
+                id: opt.id,
+                text: opt.text,
+            })),
+            message: 'Poll updated successfully',
+        });
+    } catch (error) {
+        console.error('Error updating poll:', error);
+        return res.status(500).json({
+            error: 'Internal server error while updating poll',
+        });
+    }
+};
+
+/**
+ * Delete a poll
+ * @route DELETE /api/polls/:resultsId
+ */
+export const deletePoll = async (req, res) => {
+    try {
+        const { resultsId } = req.params;
+
+        // Find the poll
+        const poll = await prisma.poll.findUnique({
+            where: { resultsId },
+            include: { options: true },
+        });
+
+        if (!poll) {
+            return res.status(404).json({
+                error: 'Poll not found',
+            });
+        }
+
+        // Delete the poll (options will be cascade deleted due to schema)
+        await prisma.poll.delete({
+            where: { id: poll.id },
+        });
+
+        return res.status(200).json({
+            message: 'Poll deleted successfully',
+            deletedPollId: poll.id,
+        });
+    } catch (error) {
+        console.error('Error deleting poll:', error);
+        return res.status(500).json({
+            error: 'Internal server error while deleting poll',
+        });
+    }
+};

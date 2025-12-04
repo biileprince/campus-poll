@@ -1,13 +1,36 @@
 import { useState } from "react";
-import { Lightbulb, X, Plus, Check, Book } from "lucide-react";
+import { useNavigate } from "react-router-dom";
+import {
+  Lightbulb,
+  X,
+  Plus,
+  Check,
+  Book,
+  Loader2,
+  Copy,
+  ExternalLink,
+} from "lucide-react";
+import { createPoll } from "../services/api";
 
 function CreatePollPage() {
+  const navigate = useNavigate();
   const [pollQuestion, setPollQuestion] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [allowMultiple, setAllowMultiple] = useState(false);
   const [anonymous, setAnonymous] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState(false);
+  const [pollLinks, setPollLinks] = useState(null);
+
+  const MAX_OPTIONS = 12;
 
   const addOption = () => {
+    if (options.length >= MAX_OPTIONS) {
+      setError(`Maximum ${MAX_OPTIONS} options allowed`);
+      setTimeout(() => setError(""), 3000);
+      return;
+    }
     setOptions([...options, ""]);
   };
 
@@ -21,6 +44,69 @@ function CreatePollPage() {
     setOptions(newOptions);
   };
 
+  const handleSubmit = async () => {
+    // Reset states
+    setError("");
+    setSuccess(false);
+
+    // Validation
+    if (!pollQuestion.trim()) {
+      setError("Please enter a poll question");
+      return;
+    }
+
+    if (pollQuestion.trim().length < 5) {
+      setError("Question must be at least 5 characters long");
+      return;
+    }
+
+    const validOptions = options.filter((opt) => opt.trim().length > 0);
+    if (validOptions.length < 2) {
+      setError("Please provide at least 2 non-empty options");
+      return;
+    }
+
+    // Check for duplicate options
+    const uniqueOptions = new Set(
+      validOptions.map((opt) => opt.trim().toLowerCase())
+    );
+    if (uniqueOptions.size !== validOptions.length) {
+      setError("Options must be unique (duplicates not allowed)");
+      return;
+    }
+
+    try {
+      setLoading(true);
+      const response = await createPoll({
+        question: pollQuestion.trim(),
+        options: validOptions.map((opt) => opt.trim()),
+      });
+
+      // Show success and poll links
+      setSuccess(true);
+      setPollLinks({
+        voteUrl: `${window.location.origin}/poll/${response.voteId}`,
+        resultsUrl: `${window.location.origin}/results/${response.resultsId}`,
+        voteId: response.voteId,
+        resultsId: response.resultsId,
+      });
+
+      // Auto-navigate to vote page after 3 seconds
+      setTimeout(() => {
+        navigate(`/poll/${response.voteId}`);
+      }, 3000);
+    } catch (err) {
+      setError(err.message || "Failed to create poll. Please try again.");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    // Could add a toast notification here
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <main className="p-6 max-w-7xl mx-auto">
@@ -28,6 +114,82 @@ function CreatePollPage() {
         <p className="text-gray-500 text-sm mb-6">
           Design engaging polls to gather insights from your audience
         </p>
+
+        {/* Error Message */}
+        {error && (
+          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <p className="text-sm font-medium">{error}</p>
+          </div>
+        )}
+
+        {/* Success Message */}
+        {success && pollLinks && (
+          <div className="mb-6 bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg">
+            <h3 className="font-semibold mb-3 flex items-center gap-2">
+              <Check className="text-green-600" size={20} />
+              Poll Created Successfully!
+            </h3>
+            <div className="space-y-3">
+              <div>
+                <p className="text-sm font-medium mb-1">Voting Link:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={pollLinks.voteUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-sm bg-white border border-green-300 rounded"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(pollLinks.voteUrl)}
+                    className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    title="Copy link"
+                  >
+                    <Copy size={16} />
+                  </button>
+                  <a
+                    href={pollLinks.voteUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    title="Open link"
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+                </div>
+              </div>
+              <div>
+                <p className="text-sm font-medium mb-1">Results Link:</p>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={pollLinks.resultsUrl}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-sm bg-white border border-green-300 rounded"
+                  />
+                  <button
+                    onClick={() => copyToClipboard(pollLinks.resultsUrl)}
+                    className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    title="Copy link"
+                  >
+                    <Copy size={16} />
+                  </button>
+                  <a
+                    href={pollLinks.resultsUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
+                    title="Open link"
+                  >
+                    <ExternalLink size={16} />
+                  </a>
+                </div>
+              </div>
+              <p className="text-xs text-green-700 mt-2">
+                Redirecting to voting page in 3 seconds...
+              </p>
+            </div>
+          </div>
+        )}
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Left Side - Poll Form  */}
@@ -82,10 +244,16 @@ function CreatePollPage() {
 
               <button
                 onClick={addOption}
-                className="flex items-center gap-2 text-[#6366F1] hover:text-[#5558E3] text-sm font-medium"
+                disabled={options.length >= MAX_OPTIONS}
+                className={`flex items-center gap-2 text-sm font-medium ${
+                  options.length >= MAX_OPTIONS
+                    ? "text-gray-400 cursor-not-allowed"
+                    : "text-[#6366F1] hover:text-[#5558E3]"
+                }`}
               >
                 <Plus size={16} />
-                Add another option
+                Add another option{" "}
+                {options.length >= MAX_OPTIONS && `(Max ${MAX_OPTIONS})`}
               </button>
             </div>
 
@@ -146,11 +314,27 @@ function CreatePollPage() {
 
             {/* Action Buttons */}
             <div className="flex gap-3">
-              <button className="flex-1 bg-[#6366F1] text-white py-3 rounded-md font-medium hover:bg-[#5558E3] transition-colors flex items-center justify-center gap-2">
-                <Check size={18} />
-                Create Poll
+              <button
+                onClick={handleSubmit}
+                disabled={loading || success}
+                className="flex-1 bg-[#6366F1] text-white py-3 rounded-md font-medium hover:bg-[#5558E3] transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <>
+                    <Loader2 size={18} className="animate-spin" />
+                    Creating...
+                  </>
+                ) : (
+                  <>
+                    <Check size={18} />
+                    Create Poll
+                  </>
+                )}
               </button>
-              <button className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors">
+              <button
+                disabled={loading || success}
+                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
+              >
                 Save as Draft
               </button>
             </div>

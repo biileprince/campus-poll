@@ -9,6 +9,8 @@ import pollRoutes from './routes/pollRoutes.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
+import { apiLimiter } from './middlewares/rateLimiter.js';
+import { sanitizeData, preventParameterPollution, sanitizeXSS, setSecurityHeaders } from './middlewares/sanitizer.js';
 
 // Load environment variables
 dotenv.config();
@@ -18,6 +20,21 @@ const PORT = process.env.PORT || 5000;
 
 // Security middleware
 app.use(helmet());
+
+// Security headers
+app.use(setSecurityHeaders);
+
+// Data sanitization against NoSQL injection
+app.use(sanitizeData);
+
+// Prevent parameter pollution
+app.use(preventParameterPollution);
+
+// XSS protection
+app.use(sanitizeXSS);
+
+// Rate limiting for all API routes
+app.use('/api', apiLimiter);
 
 // CORS configuration
 app.use(cors({
