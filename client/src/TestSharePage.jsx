@@ -252,7 +252,7 @@ export default function TestSharePage() {
                     <button
                       onClick={() => copyToClipboard("voting")}
                       aria-label="Copy voting link"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#3B82F6] text-white hover:bg-[#2563EB] focus:outline-none"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#E9F2FF] text-grey  hover:bg-[#2563EB] focus:outline-none"
                     >
                       <Icon.Clipboard width="16" height="16" />
                       <span className="text-sm">Copy</span>
@@ -283,7 +283,7 @@ export default function TestSharePage() {
                     <button
                       onClick={() => copyToClipboard("results")}
                       aria-label="Copy results link"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#E9F2FF] text-[#3B82F6] hover:bg-[#D7ECFF] focus:outline-none"
+                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#E9F2FF] text-grey hover:bg-[#2563EB] focus:outline-none"
                     >
                       <Icon.Clipboard width="16" height="16" />
                       <span className="text-sm">Copy</span>
@@ -299,11 +299,11 @@ export default function TestSharePage() {
 
                 {/* CTAs */}
                 <div className="flex flex-wrap gap-3 mt-4">
-                  <button className="ml-auto px-5 py-2.5 rounded-xl bg-[#6b7280] text-white text-sm hover:bg-[#2563EB] inline-flex items-center gap-2">
+                  <button className="ml-auto px-5 py-2.5 rounded-xl bg-[#edeff3] text-grey text-sm hover:bg-[#2563EB] inline-flex items-center gap-2">
                     Create Another Poll
                   </button>
 
-                  <button className=" px-5 py-2.5 rounded-xl bg-[#3B82F6] border border-gray-200 text-sm text-white hover:bg-gray-50 inline-flex items-center gap-2">
+                  <button className=" px-5 py-2.5 rounded-xl bg-[#edeff3] border border-gray-200 text-sm text-grey hover:bg-[#2563EB] inline-flex items-center gap-2">
                     <Icon.External width="16" height="16" /> View Results
                   </button>
                 </div>
