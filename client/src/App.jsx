@@ -4,6 +4,7 @@ import VotePage from "./pages/VotePage";
 import ResultsPage from "./pages/ResultsPage";
 import AppLayout from "./Components/AppLayout";
 import HomePage from "./pages/HomePage";
+import TestSharePage from "./TestSharePage";
 
 export default function App() {
   return (
@@ -14,6 +15,7 @@ export default function App() {
           <Route path="create-poll" element={<CreatePollPage />} />
           <Route path="results" element={<ResultsPage />} />
           <Route path="vote" element={<VotePage />} />
+          <Route path="/share" element={<TestSharePage />} />;
           {/* <Route path="history" element={<History />} /> */}
           {/* <Route path="settings" element={<Settings />} /> */}
         </Route>

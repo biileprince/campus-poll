@@ -1,9 +1,13 @@
 import React, { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { motion, AnimatePresence } from "framer-motion";
 
 export default function TestSharePage() {
-  const PRIMARY = "#3B82F6";
+  const navigate = useNavigate();
+
   const votingLink = "https://pollcreator.app/vote/abc123456";
   const resultsLink = "https://pollcreator.app/results/abc123456";
+
   const [copied, setCopied] = useState({ voting: false, results: false });
 
   const copyToClipboard = async (which) => {
@@ -13,13 +17,13 @@ export default function TestSharePage() {
       setCopied((s) => ({ ...s, [which]: true }));
       setTimeout(() => setCopied((s) => ({ ...s, [which]: false })), 1500);
     } catch (e) {
-      console.error("copy failed", e);
+      console.error("Copy failed:", e);
     }
   };
 
   const Icon = {
     Check: (props) => (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" fill="none" {...props}>
         <path
           d="M20 6L9 17l-5-5"
           stroke="currentColor"
@@ -30,13 +34,11 @@ export default function TestSharePage() {
       </svg>
     ),
     Clipboard: (props) => (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" fill="none" {...props}>
         <path
           d="M16 4h2a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         />
         <rect
           x="8"
@@ -46,304 +48,218 @@ export default function TestSharePage() {
           rx="1"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         />
       </svg>
     ),
     External: (props) => (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" fill="none" {...props}>
         <path
           d="M18 13v6a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         />
-        <path
-          d="M15 3h6v6"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-        <path
-          d="M10 14L21 3"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
+        <path d="M15 3h6v6" stroke="currentColor" strokeWidth="1.5" />
+        <path d="M10 14L21 3" stroke="currentColor" strokeWidth="1.5" />
       </svg>
     ),
     Link: (props) => (
-      <svg viewBox="0 0 24 24" fill="none" aria-hidden {...props}>
+      <svg viewBox="0 0 24 24" fill="none" {...props}>
         <path
           d="M10 14a5 5 0 0 0 7 0l1.5-1.5a3.5 3.5 0 0 0-5-5L12 9"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         />
         <path
           d="M14 10a5 5 0 0 0-7 0L5.5 11.5a3.5 3.5 0 0 0 5 5L12 15"
           stroke="currentColor"
           strokeWidth="1.5"
-          strokeLinecap="round"
-          strokeLinejoin="round"
         />
       </svg>
     ),
   };
 
   return (
-    <div className="min-h-screen flex bg-[#F9FAFB] text-[#111827]">
-      {/* LEFT SIDEBAR */}
-      <aside className="w-64 bg-white border-r border-gray-100 shadow-sm flex flex-col justify-between">
-        <div>
-          <div className="px-5 py-6 flex items-center gap-3 border-b border-gray-100">
-            <div className="w-10 h-10 rounded-md bg-[#3B82F6] flex items-center justify-center text-white font-semibold">
-              PC
-            </div>
-            <div className="text-sm font-semibold">PollCreator</div>
-          </div>
+    <div className="p-6 bg-[#F9FAFB] min-h-screen">
+      <div className="max-w-6xl mx-auto">
+        {/* SUCCESS MESSAGE */}
+        <motion.div
+          initial={{ scale: 0.85, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ duration: 0.4 }}
+          className="bg-white rounded-xl shadow-sm border p-8 text-center mb-8"
+        >
+          <motion.div
+            initial={{ rotate: -20, scale: 0 }}
+            animate={{ rotate: 0, scale: 1 }}
+            transition={{ type: "spring", stiffness: 200, damping: 12 }}
+            className="w-14 h-14 bg-emerald-500 rounded-full mx-auto flex items-center justify-center"
+          >
+            <Icon.Check width={28} height={28} className="text-white" />
+          </motion.div>
 
-          <nav className="px-3 py-6 space-y-1">
-            <a
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-[#0F172A] hover:bg-gray-50"
-              href="#create"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  d="M12 5v14M5 12h14"
-                  stroke="#111827"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Create Poll
-            </a>
-            <a
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              href="#mypolls"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  d="M3 7h18M3 12h18M3 17h18"
-                  stroke="#374151"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              My Polls
-            </a>
-            <a
-              className="flex items-center gap-3 px-3 py-2 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50"
-              href="#results"
-            >
-              <svg
-                width="16"
-                height="16"
-                viewBox="0 0 24 24"
-                fill="none"
-                aria-hidden
-              >
-                <path
-                  d="M3 3v18h18"
-                  stroke="#374151"
-                  strokeWidth="1.5"
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                />
-              </svg>
-              Results
-            </a>
-          </nav>
-        </div>
+          <h1 className="text-xl font-semibold mt-3">
+            Your poll has been created!
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Share your poll with participants using the links below.
+          </p>
+        </motion.div>
 
-        <div className="p-4 border-t border-gray-100">
-          <div className="flex items-center gap-3">
-            <img
-              src="https://via.placeholder.com/40"
-              alt="avatar"
-              className="w-10 h-10 rounded-full object-cover"
-            />
-            <div>
-              <div className="text-sm font-medium">Ebenezer</div>
-              <div className="text-xs text-gray-500">ebenezer@gmail.com</div>
-            </div>
-          </div>
-        </div>
-      </aside>
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+          {/* LEFT - MAIN */}
+          <section className="lg:col-span-8 space-y-5">
+            {/* Voting Link */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.35 }}
+              className="bg-white rounded-xl shadow-sm border p-5"
+            >
+              <h3 className="text-sm font-semibold mb-1">Voting Link</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Share this link to collect votes.
+              </p>
 
-      {/* CENTER + RIGHT */}
-      <div className="flex-1 flex flex-col">
-        {/* optional topbar */}
-        <header className="w-full border-b border-gray-100 bg-transparent p-4">
-          <div className="max-w-6xl mx-auto flex items-center justify-between">
-            <h2 className="text-lg font-semibold">Share voting link</h2>
-            <div className="flex items-center gap-4">
-              <div className="w-64">
+              <div className="flex items-center gap-3">
                 <input
-                  aria-label="Search polls"
-                  placeholder="Search polls..."
-                  className="w-full h-10 px-3 rounded-md border border-gray-200 text-sm bg-white"
+                  readOnly
+                  value={votingLink}
+                  className="flex-1 h-11 px-4 rounded-lg border bg-gray-50 text-sm"
                 />
+                <button
+                  onClick={() => copyToClipboard("voting")}
+                  className="px-4 py-2 rounded-md bg-blue-100 hover:bg-blue-600 hover:text-white transition"
+                >
+                  <Icon.Clipboard width={16} height={16} />
+                </button>
               </div>
-              <div className="w-9 h-9 rounded-full bg-gray-200 overflow-hidden">
-                <img
-                  src="https://via.placeholder.com/36"
-                  alt="avatar"
-                  className="w-full h-full object-cover"
+
+              <AnimatePresence>
+                {copied.voting && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm text-emerald-600 mt-3"
+                  >
+                    Voting link copied ✔
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* Results Link */}
+            <motion.div
+              initial={{ opacity: 0, y: 12 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.45 }}
+              className="bg-white rounded-xl shadow-sm border p-5"
+            >
+              <h3 className="text-sm font-semibold mb-1">Results Link</h3>
+              <p className="text-xs text-gray-500 mb-3">
+                Share this link to view results.
+              </p>
+
+              <div className="flex items-center gap-3">
+                <input
+                  readOnly
+                  value={resultsLink}
+                  className="flex-1 h-11 px-4 rounded-lg border bg-gray-50 text-sm"
                 />
+                <button
+                  onClick={() => copyToClipboard("results")}
+                  className="px-4 py-2 rounded-md bg-blue-100 hover:bg-blue-600 hover:text-white transition"
+                >
+                  <Icon.Clipboard width={16} height={16} />
+                </button>
               </div>
-            </div>
-          </div>
-        </header>
 
-        <main className="p-6">
-          <div className="max-w-6xl mx-auto">
-            {/* Success card */}
-            <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-8 mb-6">
-              <div className="flex flex-col items-center text-center gap-3">
-                <div className="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center">
-                  <Icon.Check className="text-white" width="28" height="28" />
-                </div>
-                <h1 className="text-xl font-semibold">
-                  Your poll has been created!
-                </h1>
-                <p className="text-sm text-[#6b7280] max-w-[56ch]">
-                  Share your poll with participants using the links below.
-                </p>
+              <AnimatePresence>
+                {copied.results && (
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="text-sm text-emerald-600 mt-3"
+                  >
+                    Results link copied ✔
+                  </motion.p>
+                )}
+              </AnimatePresence>
+            </motion.div>
+
+            {/* CTA Buttons */}
+            <div className="flex gap-3 mt-4">
+              <button
+                onClick={() => navigate("/create-poll")}
+                className="px-5 py-2.5 rounded-xl bg-gray-100 hover:bg-blue-600 hover:text-white transition"
+              >
+                Create Another Poll
+              </button>
+
+              <button
+                onClick={() => navigate("/results")}
+                className="px-5 py-2.5 rounded-xl border bg-gray-100 hover:bg-blue-600 hover:text-white transition flex items-center gap-2"
+              >
+                <Icon.External width={16} height={16} /> View Results
+              </button>
+            </div>
+          </section>
+
+          {/* RIGHT - STATS */}
+          <aside className="lg:col-span-4">
+            <motion.div
+              initial={{ opacity: 0, x: 15 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ duration: 0.55 }}
+              className="bg-white rounded-xl border shadow-sm p-5"
+            >
+              <h4 className="text-sm font-semibold mb-4">Today's Stats</h4>
+
+              <div className="space-y-4 mb-4">
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.5 }}
+                  className="rounded-lg bg-blue-50 p-4"
+                >
+                  <p className="text-2xl font-bold text-blue-600">12</p>
+                  <p className="text-xs text-gray-500">Polls Created</p>
+                </motion.div>
+
+                <motion.div
+                  initial={{ scale: 0.9, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={{ duration: 0.6 }}
+                  className="rounded-lg bg-emerald-50 p-4"
+                >
+                  <p className="text-2xl font-bold text-emerald-600">87%</p>
+                  <p className="text-xs text-gray-500">Avg Response Rate</p>
+                </motion.div>
               </div>
-            </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-              {/* Main center column */}
-              <section className="lg:col-span-8 space-y-4">
-                {/* Voting Link Card */}
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold mb-1">Voting Link</h3>
-                  <p className="text-xs text-[#6b7280] mb-3">
-                    Share this link with participants to collect votes
-                  </p>
+              <div className="border-t pt-3">
+                <p className="text-xs font-semibold mb-2">Quick Actions</p>
 
-                  <div className="flex items-center gap-3">
-                    <input
-                      readOnly
-                      value={votingLink}
-                      className="flex-1 h-11 px-4 rounded-lg border border-gray-200 bg-gray-50 text-sm"
-                      aria-label="Voting link"
-                    />
-                    <button
-                      onClick={() => copyToClipboard("voting")}
-                      aria-label="Copy voting link"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#E9F2FF] text-grey  hover:bg-[#2563EB] focus:outline-none"
-                    >
-                      <Icon.Clipboard width="16" height="16" />
-                      <span className="text-sm">Copy</span>
-                    </button>
-                  </div>
+                <ul className="space-y-2 text-sm">
+                  <li
+                    className="flex items-center gap-2 text-blue-600 cursor-pointer"
+                    onClick={() => navigate("/share")}
+                  >
+                    <Icon.Link width={14} height={14} /> Share Poll
+                  </li>
 
-                  {copied.voting && (
-                    <p className="text-sm text-emerald-600 mt-3">
-                      Voting link copied ✔
-                    </p>
-                  )}
-                </div>
-
-                {/* Results Link Card */}
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                  <h3 className="text-sm font-semibold mb-1">Results Link</h3>
-                  <p className="text-xs text-[#6b7280] mb-3">
-                    Share this link to view live poll results
-                  </p>
-
-                  <div className="flex items-center gap-3">
-                    <input
-                      readOnly
-                      value={resultsLink}
-                      className="flex-1 h-11 px-4 rounded-lg border border-gray-200 bg-gray-50 text-sm"
-                      aria-label="Results link"
-                    />
-                    <button
-                      onClick={() => copyToClipboard("results")}
-                      aria-label="Copy results link"
-                      className="inline-flex items-center gap-2 px-4 py-2 rounded-md bg-[#E9F2FF] text-grey hover:bg-[#2563EB] focus:outline-none"
-                    >
-                      <Icon.Clipboard width="16" height="16" />
-                      <span className="text-sm">Copy</span>
-                    </button>
-                  </div>
-
-                  {copied.results && (
-                    <p className="text-sm text-emerald-600 mt-3">
-                      Results link copied ✔
-                    </p>
-                  )}
-                </div>
-
-                {/* CTAs */}
-                <div className="flex flex-wrap gap-3 mt-4">
-                  <button className="ml-auto px-5 py-2.5 rounded-xl bg-[#edeff3] text-grey text-sm hover:bg-[#2563EB] inline-flex items-center gap-2">
-                    Create Another Poll
-                  </button>
-
-                  <button className=" px-5 py-2.5 rounded-xl bg-[#edeff3] border border-gray-200 text-sm text-grey hover:bg-[#2563EB] inline-flex items-center gap-2">
-                    <Icon.External width="16" height="16" /> View Results
-                  </button>
-                </div>
-              </section>
-
-              {/* Right stats column */}
-              <aside className="lg:col-span-4">
-                <div className="bg-white rounded-xl border border-gray-100 shadow-sm p-5">
-                  <h4 className="text-sm font-semibold mb-4">Today's Stats</h4>
-
-                  <div className="space-y-4 mb-4">
-                    <div className="rounded-lg bg-[#EFF6FF] p-4">
-                      <p className="text-2xl font-bold text-[#2563EB]">12</p>
-                      <p className="text-xs text-[#6b7280]">Polls Created</p>
-                    </div>
-
-                    <div className="rounded-lg bg-[#ECFDF5] p-4">
-                      <p className="text-2xl font-bold text-emerald-600">87%</p>
-                      <p className="text-xs text-[#6b7280]">
-                        Avg Response Rate
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="border-t pt-3">
-                    <p className="text-xs font-semibold mb-2">Quick Actions</p>
-                    <ul className="space-y-2 text-sm">
-                      <li className="flex items-center gap-2 text-[#3B82F6]">
-                        <Icon.Link width="14" height="14" /> Share Poll
-                      </li>
-                      <li className="flex items-center gap-2 text-gray-500">
-                        <Icon.External width="14" height="14" /> View All Polls
-                      </li>
-                    </ul>
-                  </div>
-                </div>
-              </aside>
-            </div>
-          </div>
-        </main>
+                  <li
+                    className="flex items-center gap-2 text-gray-500 cursor-pointer"
+                    onClick={() => navigate("/polls")}
+                  >
+                    <Icon.External width={14} height={14} /> View All Polls
+                  </li>
+                </ul>
+              </div>
+            </motion.div>
+          </aside>
+        </div>
       </div>
     </div>
   );
