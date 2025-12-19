@@ -1,20 +1,22 @@
 import {
-  ChartBarIcon,
-  ChartColumnIncreasingIcon,
-  ClockIcon,
-  HouseIcon,
-  PlusIcon,
+  BarChart,
+  TrendingUp,
+  Clock,
+  Home,
+  Plus,
+  Vote,
   Settings,
-  VoteIcon,
 } from "lucide-react";
+
 import { NavLink } from "react-router-dom";
+
 export default function Sidebar() {
   return (
     <aside className="bg-white border-r border border-gray-300 p-5 ">
       <div className="flex flex-col gap-6">
         <span className="flex items-center gap-2 text-xl font-bold mb-4 pb-4 border-b border-gray-200">
           <div className="w-8 h-8 bg-[#6366F1] rounded-lg flex items-center justify-center">
-            <ChartColumnIncreasingIcon size={20} className="text-white" />
+            <TrendingUp size={20} className="text-white" />
           </div>
           Poll creator
         </span>
@@ -29,7 +31,7 @@ export default function Sidebar() {
           }
           to=""
         >
-          <HouseIcon /> Home
+          <Home /> Home
         </NavLink>
         <NavLink
           className={({ isActive }) =>
@@ -42,7 +44,7 @@ export default function Sidebar() {
           }
           to="/create-poll"
         >
-          <PlusIcon /> Create Poll
+          <Plus /> Create Poll
         </NavLink>
         <NavLink
           className={({ isActive }) =>
@@ -55,7 +57,7 @@ export default function Sidebar() {
           }
           to="/results"
         >
-          <ChartBarIcon /> Results
+          <BarChart /> Results
         </NavLink>
         <NavLink
           className={({ isActive }) =>
@@ -68,7 +70,7 @@ export default function Sidebar() {
           }
           to="/vote"
         >
-          <VoteIcon /> Vote
+          <Vote /> Vote
         </NavLink>
         <NavLink
           className={({ isActive }) =>
@@ -81,7 +83,7 @@ export default function Sidebar() {
           }
           to="/history"
         >
-          <ClockIcon /> History
+          <Clock /> History
         </NavLink>
         <NavLink
           className={({ isActive }) =>
