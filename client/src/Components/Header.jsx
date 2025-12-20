@@ -1,4 +1,4 @@
-import { Search, Bell, Info, CircleUserRound } from "lucide-react";
+import { Search, Bell, Info, User } from "lucide-react";
 
 export default function Header() {
   return (
@@ -23,7 +23,7 @@ export default function Header() {
             <Info size={18} className="text-gray-700" />
           </button>
           <button className="hover:opacity-70 transition-opacity">
-            <CircleUserRound size={20} className="text-gray-700" />
+            <User size={20} className="text-gray-700" />
           </button>
         </div>
       </div>
