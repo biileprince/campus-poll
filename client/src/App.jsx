@@ -6,7 +6,7 @@ import ResultsPage from "./pages/ResultsPage";
 import AppLayout from "./Components/AppLayout";
 import HomePage from "./pages/HomePage";
 
-function App() {
+export default function App() {
   return (
     <BrowserRouter>
       <Routes>
@@ -23,9 +23,3 @@ function App() {
     </BrowserRouter>
   );
 }
-
-export default App;
-// NOTE: If you want routing, run: npm install react-router-dom
-// then uncomment the imports and Routes below.
-// import { BrowserRouter, Routes, Route } from "react-router-dom";
-

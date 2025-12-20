@@ -217,6 +217,58 @@ Response: 200 OK
 
 Note: Returns voteCount as 0 to voters (actual counts hidden until they view results)
 
+#### Update Poll
+
+```http
+PUT /api/polls/:resultsId
+Content-Type: application/json
+
+{
+  "question": "Updated question text?",
+  "options": ["New Option 1", "New Option 2", "New Option 3"]
+}
+
+Response: 200 OK
+{
+  "id": "clhx1234abcd5678efgh",
+  "voteId": "xyz123abc",
+  "resultsId": "results789xyz",
+  "question": "Updated question text?",
+  "options": [
+    { "id": "opt5new", "text": "New Option 1" },
+    { "id": "opt6new", "text": "New Option 2" },
+    { "id": "opt7new", "text": "New Option 3" }
+  ],
+  "message": "Poll updated successfully"
+}
+
+Response: 403 Forbidden (if poll has votes)
+{
+  "error": "Cannot edit poll that has received votes"
+}
+```
+
+Note: Both question and options are optional. Can update either or both. Poll cannot be edited after votes are cast.
+
+#### Delete Poll
+
+```http
+DELETE /api/polls/:resultsId
+
+Response: 200 OK
+{
+  "message": "Poll deleted successfully",
+  "deletedPollId": "clhx1234abcd5678efgh"
+}
+
+Response: 404 Not Found
+{
+  "error": "Poll not found"
+}
+```
+
+Note: Deletes the poll and all associated options (cascade delete). Can delete at any time, even after votes are cast.
+
 #### Cast Vote
 
 ```http
