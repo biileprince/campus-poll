@@ -1,9 +1,8 @@
-function ResultsPage() {
+export default function ResultsPage() {
   return (
-    <div>
-      <h1>Results Page</h1>
+    <div className="p-6">
+      <h1 className="text-2xl font-bold">Results</h1>
+      <p className="text-gray-500 mt-2">Results page UI coming soon.</p>
     </div>
   );
 }
-
-export default ResultsPage;
