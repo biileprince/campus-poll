@@ -1,14 +1,28 @@
+import ResultsHeader from "../components/Results/ResultsHeader";
+import MetricsCard from "../components/Results/MetricsCard";
+import VoteDistribution from "../components/Results/VoteDistribution";
+import VoteTimeline from "../components/Results/VoteTimeline";
+import ShareResults from "../components/Results/ShareResults";
+
 export default function ResultsPage() {
   return (
     <div className="p-6">
-      <h1 className="text-2xl font-bold text-gray-900">Poll Results</h1>
+      <ResultsHeader />
 
-      <p className="text-gray-500 mt-2">
-        View real-time voting results for your polls.
-      </p>
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        <MetricsCard title="Total Votes" value="2,847" subtitle="+12%" />
+        <MetricsCard title="Very Satisfied" value="45.2%" />
+        <MetricsCard title="Time Active" value="7 Days" />
+        <MetricsCard title="Engagement Rate" value="68.3%" subtitle="+8%" />
+      </div>
 
-      <div className="mt-6 bg-white rounded-lg border p-4">
-        <p className="text-sm text-gray-400">Results data will appear here.</p>
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="lg:col-span-2 space-y-6">
+          <VoteDistribution />
+          <VoteTimeline />
+        </div>
+
+        <ShareResults />
       </div>
     </div>
   );
