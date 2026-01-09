@@ -1,8 +1,19 @@
 import axios from 'axios';
 
-// Use relative path for production (same domain) or env variable for development
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ||
-  (import.meta.env.PROD ? '/api' : 'http://localhost:5000/api');
+// Determine API base URL based on environment
+// In production (Render), use relative path since frontend is served by same server
+// In development, use localhost with appropriate port
+const getApiBaseUrl = () => {
+  // Check if we're in production mode
+  if (import.meta.env.MODE === 'production') {
+    return '/api';
+  }
+  
+  // Development mode - use env variable or default localhost
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance with default config
 const api = axios.create({

@@ -38,6 +38,8 @@ Add these in Render Dashboard → Environment:
 - `DATABASE_URL` = (paste your PostgreSQL Internal Database URL)
 - `PORT` = `10000`
 
+**Important:** Do NOT set `VITE_API_BASE_URL` in production - the app uses relative paths automatically.
+
 ### 4. Deploy
 
 Click "Create Web Service" and wait for deployment to complete.
