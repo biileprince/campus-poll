@@ -1,5 +1,5 @@
 import express from 'express';
-import { createPoll, getPollByVoteId, castVote, getPollResults, updatePoll, deletePoll } from '../controllers/pollController.js';
+import { getAllPolls, createPoll, getPollByVoteId, castVote, getPollResults, updatePoll, deletePoll } from '../controllers/pollController.js';
 import { createPollLimiter, voteLimiter, resultsLimiter } from '../middlewares/rateLimiter.js';
 import {
     validateCreatePoll,
@@ -12,6 +12,9 @@ import {
 } from '../middlewares/validator.js';
 
 const router = express.Router();
+
+// GET /api/polls - Get all polls (list)
+router.get('/polls', getAllPolls);
 
 // POST /api/polls - Create a new poll
 router.post('/polls', createPollLimiter, validateCreatePoll, createPoll);

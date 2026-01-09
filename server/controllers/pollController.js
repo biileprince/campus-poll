@@ -1,6 +1,56 @@
 import prisma from '../utils/prisma.js';
 
 /**
+ * Get all polls (recent polls list)
+ * @route GET /api/polls
+ * @param {Object} req - Express request object
+ * @param {Object} res - Express response object
+ */
+export const getAllPolls = async (req, res) => {
+    try {
+        const polls = await prisma.poll.findMany({
+            orderBy: {
+                createdAt: 'desc',
+            },
+            take: 50, // Limit to 50 most recent polls
+            include: {
+                options: {
+                    select: {
+                        id: true,
+                        text: true,
+                        voteCount: true,
+                    },
+                },
+            },
+        });
+
+        // Calculate total votes for each poll
+        const pollsWithStats = polls.map(poll => {
+            const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+            return {
+                id: poll.id,
+                question: poll.question,
+                voteId: poll.voteId,
+                resultsId: poll.resultsId,
+                createdAt: poll.createdAt,
+                totalVotes: totalVotes,
+                optionCount: poll.options.length,
+            };
+        });
+
+        return res.status(200).json({
+            polls: pollsWithStats,
+            total: pollsWithStats.length,
+        });
+    } catch (error) {
+        console.error('Error fetching polls:', error);
+        return res.status(500).json({
+            error: 'Internal server error while fetching polls',
+        });
+    }
+};
+
+/**
  * Create a new poll with options
  * @route POST /api/polls
  * @param {Object} req - Express request object
@@ -123,10 +173,17 @@ export const getPollByVoteId = async (req, res) => {
             });
         }
 
+        // Calculate total votes
+        const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+
         // Return poll data with voteCount set to 0 for all options (hide actual votes)
         const response = {
             id: poll.id,
             question: poll.question,
+            voteId: poll.voteId,
+            resultsId: poll.resultsId,
+            createdAt: poll.createdAt,
+            totalVotes: totalVotes,
             options: poll.options.map(option => ({
                 id: option.id,
                 text: option.text,
@@ -234,6 +291,8 @@ export const getPollResults = async (req, res) => {
             id: poll.id,
             question: poll.question,
             totalVotes,
+            status: totalVotes > 0 ? 'Active' : 'No votes yet',
+            createdAt: poll.createdAt,
             options: poll.options.map(option => ({
                 id: option.id,
                 text: option.text,

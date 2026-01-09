@@ -52,28 +52,30 @@ export default function ResultsPage() {
   const options = results.options || [];
 
   const turnoutData = options.map((opt) => ({
-    label: opt.option,
-    value: opt.votes || 0,
+    label: opt.text,
+    value: opt.voteCount || 0,
   }));
 
-  const totalVotes = options.reduce((sum, opt) => sum + (opt.votes || 0), 0);
+  const totalVotes =
+    results.totalVotes ||
+    options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
       <ResultsHeader title={results.question || "Poll Results"} />
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
         <MetricsCard title="Total Votes" value={totalVotes} />
         <MetricsCard title="Options" value={options.length} />
         <MetricsCard title="Status" value={results.status || "Closed"} />
       </div>
 
       {options.length === 0 ? (
-        <div className="text-center text-gray-500 py-10">
+        <div className="text-center text-gray-500 py-10 text-sm sm:text-base">
           No votes have been cast yet 📭
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
           <VoteDistribution data={options} />
           <TurnoutChart data={turnoutData} />
         </div>

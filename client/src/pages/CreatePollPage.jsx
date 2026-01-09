@@ -23,12 +23,12 @@ function CreatePollPage() {
   const [success, setSuccess] = useState(false);
   const [pollLinks, setPollLinks] = useState(null);
 
-  const MAX_OPTIONS = 12;
+  const MAX_OPTIONS = 10;
 
   const addOption = () => {
     if (options.length >= MAX_OPTIONS) {
       setError(`Maximum ${MAX_OPTIONS} options allowed`);
-      setTimeout(() => setError(""), 3000);
+      setTimeout(() => setError(""), 6000);
       return;
     }
     setOptions([...options, ""]);
@@ -91,9 +91,9 @@ function CreatePollPage() {
         resultsId: response.resultsId,
       });
 
-      // Auto-navigate to vote page after 3 seconds
+      // Auto-navigate to results page after 3 seconds
       setTimeout(() => {
-        navigate(`/poll/${response.voteId}`);
+        navigate(`/results/${response.resultsId}`);
       }, 3000);
     } catch (err) {
       setError(err.message || "Failed to create poll. Please try again.");
@@ -102,31 +102,38 @@ function CreatePollPage() {
     }
   };
 
-  const copyToClipboard = (text) => {
-    navigator.clipboard.writeText(text);
-    // Could add a toast notification here
+  const copyToClipboard = (url, type) => {
+    const description =
+      type === "vote"
+        ? `Vote on this poll: "${pollQuestion}"\n${url}`
+        : `View results for: "${pollQuestion}"\n${url}`;
+
+    navigator.clipboard.writeText(description);
+    alert("Link with description copied to clipboard!");
   };
 
   return (
     <div className="bg-gray-50 min-h-screen">
-      <main className="p-6 max-w-7xl mx-auto">
-        <h1 className="text-2xl font-bold text-gray-900 mb-1">Create Poll</h1>
-        <p className="text-gray-500 text-sm mb-6">
+      <main className="p-4 sm:p-6 max-w-7xl mx-auto">
+        <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">
+          Create Poll
+        </h1>
+        <p className="text-gray-500 text-xs sm:text-sm mb-4 sm:mb-6">
           Design engaging polls to gather insights from your audience
         </p>
 
         {/* Error Message */}
         {error && (
-          <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-            <p className="text-sm font-medium">{error}</p>
+          <div className="mb-4 sm:mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
+            <p className="text-xs sm:text-sm font-medium">{error}</p>
           </div>
         )}
 
         {/* Success Message */}
         {success && pollLinks && (
-          <div className="mb-6 bg-green-50 border border-green-200 text-green-800 px-6 py-4 rounded-lg">
-            <h3 className="font-semibold mb-3 flex items-center gap-2">
-              <Check className="text-green-600" size={20} />
+          <div className="mb-4 sm:mb-6 bg-green-50 border border-green-200 text-green-800 px-4 sm:px-6 py-3 sm:py-4 rounded-lg">
+            <h3 className="font-semibold text-sm sm:text-base mb-3 flex items-center gap-2">
+              <Check className="text-green-600" size={18} />
               Poll Created Successfully!
             </h3>
             <div className="space-y-3">
@@ -140,9 +147,9 @@ function CreatePollPage() {
                     className="flex-1 px-3 py-2 text-sm bg-white border border-green-300 rounded"
                   />
                   <button
-                    onClick={() => copyToClipboard(pollLinks.voteUrl)}
+                    onClick={() => copyToClipboard(pollLinks.voteUrl, "vote")}
                     className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    title="Copy link"
+                    title="Copy link with description"
                   >
                     <Copy size={16} />
                   </button>
@@ -167,9 +174,11 @@ function CreatePollPage() {
                     className="flex-1 px-3 py-2 text-sm bg-white border border-green-300 rounded"
                   />
                   <button
-                    onClick={() => copyToClipboard(pollLinks.resultsUrl)}
+                    onClick={() =>
+                      copyToClipboard(pollLinks.resultsUrl, "results")
+                    }
                     className="p-2 bg-green-600 text-white rounded hover:bg-green-700"
-                    title="Copy link"
+                    title="Copy link with description"
                   >
                     <Copy size={16} />
                   </button>
@@ -185,17 +194,17 @@ function CreatePollPage() {
                 </div>
               </div>
               <p className="text-xs text-green-700 mt-2">
-                Redirecting to voting page in 3 seconds...
+                Redirecting to results page in 3 seconds...
               </p>
             </div>
           </div>
         )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
           {/* Left Side - Poll Form  */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="lg:col-span-2 space-y-4 sm:space-y-6">
             {/* Poll Question Card */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
+            <div className="bg-white rounded-lg shadow-sm p-4 sm:p-6">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Poll Question
               </label>
