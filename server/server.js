@@ -3,6 +3,11 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import routes
 import pollRoutes from './routes/pollRoutes.js';
@@ -53,17 +58,16 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Campus Poll API',
-    version: '1.0.0',
-    status: 'running',
-  });
-});
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // API routes
 app.use('/api', pollRoutes);
+
+// Serve React app for all other routes (React Router handling)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);

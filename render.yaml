@@ -1,0 +1,17 @@
+# Build settings
+build:
+  command: cd server && npm install && npm run build && npm run db:generate
+  publish: server
+
+# Start command
+start:
+  command: cd server && npm run db:push && npm start
+
+# Environment
+env:
+  - key: NODE_ENV
+    value: production
+  - key: DATABASE_URL
+    sync: false
+  - key: PORT
+    value: 10000
