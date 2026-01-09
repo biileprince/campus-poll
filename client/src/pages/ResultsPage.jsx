@@ -2,11 +2,11 @@ import { useEffect, useState, useRef } from "react";
 import { useParams } from "react-router-dom";
 import { useGetResults } from "../hooks/useApi";
 
-import ResultsHeader from "../components/Results/ResultsHeader";
-import MetricsCard from "../components/Results/MetricsCard";
-import VoteDistribution from "../components/Results/VoteDistribution";
-import TurnoutChart from "../components/Results/TurnoutChart";
-import ResultsSkeleton from "../components/Results/ResultsSkeleton";
+import ResultsHeader from "../Components/Results/ResultsHeader";
+import MetricsCard from "../Components/Results/MetricsCard";
+import VoteDistribution from "../Components/Results/VoteDistribution";
+import TurnoutChart from "../Components/Results/TurnoutChart";
+import ResultsSkeleton from "../Components/Results/ResultsSkeleton";
 
 export default function ResultsPage() {
   const { id: resultsId } = useParams();
