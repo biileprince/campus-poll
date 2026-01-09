@@ -41,6 +41,16 @@ export const useApi = (apiFunction) => {
 };
 
 /**
+ * Custom hook specifically for getting all polls
+ */
+export const useGetAllPolls = () => {
+  return useApi(async () => {
+    const { getAllPolls } = await import('../services/api.js');
+    return getAllPolls();
+  });
+};
+
+/**
  * Custom hook specifically for poll creation
  */
 export const useCreatePoll = () => {

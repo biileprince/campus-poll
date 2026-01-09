@@ -33,6 +33,19 @@ api.interceptors.response.use(
 );
 
 /**
+ * Get all polls
+ * @returns {Promise<Object>} List of polls
+ */
+export const getAllPolls = async () => {
+  try {
+    const response = await api.get('/polls');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
  * Create a new poll
  * @param {Object} pollData - Poll data containing question and options
  * @returns {Promise<Object>} Poll creation response
@@ -68,7 +81,7 @@ export const getPoll = async (voteId) => {
  */
 export const submitVote = async (voteId, optionId) => {
   try {
-    const response = await api.post(`/poll/${voteId}/vote`, { optionId });
+    const response = await api.post(`/vote/${optionId}`, { voteId });
     return response.data;
   } catch (error) {
     throw error;
