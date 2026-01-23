@@ -8,7 +8,7 @@ const getApiBaseUrl = () => {
   if (import.meta.env.MODE === 'production') {
     return '/api';
   }
-  
+
   // Development mode - use env variable or default localhost
   return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
 };

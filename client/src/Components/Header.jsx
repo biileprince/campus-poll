@@ -1,5 +1,16 @@
 import { useState, useRef, useEffect } from "react";
-import { Search, Bell, Info, User, Menu, LogIn, LogOut, FolderOpen, Settings, ChevronDown } from "lucide-react";
+import {
+  Search,
+  Bell,
+  Info,
+  User,
+  Menu,
+  LogIn,
+  LogOut,
+  FolderOpen,
+  Settings,
+  ChevronDown,
+} from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -23,7 +34,7 @@ export default function Header({ onMenuClick }) {
   const handleLogout = () => {
     logout();
     setDropdownOpen(false);
-    navigate('/');
+    navigate("/");
   };
 
   return (
@@ -60,23 +71,28 @@ export default function Header({ onMenuClick }) {
           <button className="hover:opacity-70 transition-opacity hidden sm:block">
             <Info size={18} className="text-gray-700" />
           </button>
-          
+
           {/* Profile Dropdown */}
           <div className="relative" ref={dropdownRef}>
-            <button 
+            <button
               onClick={() => setDropdownOpen(!dropdownOpen)}
               className="flex items-center gap-1 hover:opacity-70 transition-opacity"
             >
               {isAuthenticated ? (
                 <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
                   <span className="text-indigo-600 font-semibold text-sm">
-                    {user?.name?.charAt(0)?.toUpperCase() || user?.email?.charAt(0)?.toUpperCase() || 'U'}
+                    {user?.name?.charAt(0)?.toUpperCase() ||
+                      user?.email?.charAt(0)?.toUpperCase() ||
+                      "U"}
                   </span>
                 </div>
               ) : (
                 <User size={20} className="text-gray-700" />
               )}
-              <ChevronDown size={14} className="text-gray-500 hidden sm:block" />
+              <ChevronDown
+                size={14}
+                className="text-gray-500 hidden sm:block"
+              />
             </button>
 
             {/* Dropdown Menu */}
@@ -87,13 +103,13 @@ export default function Header({ onMenuClick }) {
                     {/* User Info */}
                     <div className="px-4 py-2 border-b border-gray-100">
                       <p className="text-sm font-semibold text-gray-900 truncate">
-                        {user?.name || 'User'}
+                        {user?.name || "User"}
                       </p>
                       <p className="text-xs text-gray-500 truncate">
                         {user?.email}
                       </p>
                     </div>
-                    
+
                     {/* Menu Items */}
                     <Link
                       to="/my-polls"
@@ -111,7 +127,7 @@ export default function Header({ onMenuClick }) {
                       <Settings size={16} />
                       Create Poll
                     </Link>
-                    
+
                     <div className="border-t border-gray-100 mt-2 pt-2">
                       <button
                         onClick={handleLogout}

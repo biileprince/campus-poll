@@ -33,7 +33,7 @@ function VotingPage() {
   // Check if user has already voted on this poll
   useEffect(() => {
     if (voteId) {
-      const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
+      const votedPolls = JSON.parse(localStorage.getItem("votedPolls") || "{}");
       if (votedPolls[voteId]) {
         setHasVoted(true);
       }
@@ -46,10 +46,10 @@ function VotingPage() {
 
     if (poll?.allowMultiple) {
       // Multiple selection mode
-      setSelectedOptions(prev => 
+      setSelectedOptions((prev) =>
         prev.includes(optionId)
-          ? prev.filter(id => id !== optionId)
-          : [...prev, optionId]
+          ? prev.filter((id) => id !== optionId)
+          : [...prev, optionId],
       );
     } else {
       // Single selection mode
@@ -58,22 +58,23 @@ function VotingPage() {
   };
 
   const handleSubmit = async () => {
-    if (selectedOptions.length === 0 || !voteId || hasVoted || poll?.isExpired) return;
+    if (selectedOptions.length === 0 || !voteId || hasVoted || poll?.isExpired)
+      return;
 
     try {
       // Submit vote for each selected option
       for (const optionId of selectedOptions) {
         await submitVote(voteId, optionId);
       }
-      
+
       // Mark poll as voted in localStorage
-      const votedPolls = JSON.parse(localStorage.getItem('votedPolls') || '{}');
-      votedPolls[voteId] = { 
+      const votedPolls = JSON.parse(localStorage.getItem("votedPolls") || "{}");
+      votedPolls[voteId] = {
         votedAt: new Date().toISOString(),
-        options: selectedOptions 
+        options: selectedOptions,
       };
-      localStorage.setItem('votedPolls', JSON.stringify(votedPolls));
-      
+      localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
+
       // Navigate to results page after successful vote
       navigate(`/results/${poll.resultsId}`);
     } catch (err) {
@@ -99,10 +100,10 @@ function VotingPage() {
           <h2 className="text-xl font-bold text-red-600 mb-2">Error</h2>
           <p className="text-gray-600">{error || "Poll not found"}</p>
           <button
-            onClick={() => navigate("/")}
+            onClick={() => navigate("/polls")}
             className="mt-4 px-4 py-2 bg-[#4F46E5] text-white rounded-lg hover:bg-[#4338CA]"
           >
-            Go Home
+            Back to Polls
           </button>
         </div>
       </div>
@@ -116,11 +117,11 @@ function VotingPage() {
     <div className="bg-[#F3F4F6] min-h-screen">
       <main className="p-4 sm:p-6 max-w-7xl mx-auto">
         <button
-          onClick={() => navigate("/")}
+          onClick={() => navigate("/polls")}
           className="flex items-center gap-2 text-[#4F46E5] hover:text-[#4338CA] mb-4 sm:mb-6 text-sm font-medium"
         >
           <ArrowLeft size={16} />
-          Back to Home
+          Back to Polls
         </button>
 
         {/* Main Grid Layout */}
@@ -151,31 +152,42 @@ function VotingPage() {
               </h1>
 
               <p className="text-sm sm:text-base text-[#6B7280] mb-6 sm:mb-8">
-                {isExpired 
+                {isExpired
                   ? "This poll has expired. You can view the results below."
-                  : hasVoted 
+                  : hasVoted
                     ? "You have already cast your vote. View the results to see how others voted."
-                    : poll.allowMultiple 
+                    : poll.allowMultiple
                       ? "Select one or more options from the choices below. Your vote will be recorded anonymously."
-                      : "Select your preferred option from the choices below. Your vote will be recorded anonymously."
-                }
+                      : "Select your preferred option from the choices below. Your vote will be recorded anonymously."}
               </p>
 
               {/* Already Voted / Expired Message */}
               {(hasVoted || isExpired) && (
-                <div className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
-                  isExpired ? 'bg-gray-50 border border-gray-200' : 'bg-blue-50 border border-blue-200'
-                }`}>
-                  <AlertCircle size={20} className={isExpired ? 'text-gray-500' : 'text-blue-500'} />
+                <div
+                  className={`mb-6 p-4 rounded-lg flex items-start gap-3 ${
+                    isExpired
+                      ? "bg-gray-50 border border-gray-200"
+                      : "bg-blue-50 border border-blue-200"
+                  }`}
+                >
+                  <AlertCircle
+                    size={20}
+                    className={isExpired ? "text-gray-500" : "text-blue-500"}
+                  />
                   <div>
-                    <p className={`font-medium ${isExpired ? 'text-gray-700' : 'text-blue-700'}`}>
-                      {isExpired ? 'This poll has ended' : 'You have already voted'}
+                    <p
+                      className={`font-medium ${isExpired ? "text-gray-700" : "text-blue-700"}`}
+                    >
+                      {isExpired
+                        ? "This poll has ended"
+                        : "You have already voted"}
                     </p>
-                    <p className={`text-sm ${isExpired ? 'text-gray-600' : 'text-blue-600'}`}>
-                      {isExpired 
-                        ? 'The voting period for this poll has closed.'
-                        : 'Each person can only vote once per poll.'
-                      }
+                    <p
+                      className={`text-sm ${isExpired ? "text-gray-600" : "text-blue-600"}`}
+                    >
+                      {isExpired
+                        ? "The voting period for this poll has closed."
+                        : "Each person can only vote once per poll."}
                     </p>
                     <button
                       onClick={() => navigate(`/results/${poll.resultsId}`)}
@@ -192,16 +204,16 @@ function VotingPage() {
                 {poll.options.map((option) => {
                   const isSelected = selectedOptions.includes(option.id);
                   const isDisabled = hasVoted || isExpired;
-                  
+
                   return (
                     <button
                       key={option.id}
                       onClick={() => handleOptionClick(option.id)}
                       disabled={isDisabled}
                       className={`w-full flex items-center justify-between p-3 sm:p-4 border-2 rounded-lg transition-all ${
-                        isDisabled 
-                          ? 'cursor-not-allowed opacity-60' 
-                          : 'hover:border-[#4F46E5] hover:bg-[#F9FAFB]'
+                        isDisabled
+                          ? "cursor-not-allowed opacity-60"
+                          : "hover:border-[#4F46E5] hover:bg-[#F9FAFB]"
                       } ${
                         isSelected
                           ? "border-[#4F46E5] bg-[#EEF2FF]"
@@ -210,17 +222,18 @@ function VotingPage() {
                     >
                       <div className="flex items-center gap-3 sm:gap-4">
                         <div
-                          className={`w-5 h-5 ${poll.allowMultiple ? 'rounded' : 'rounded-full'} border-2 flex items-center justify-center flex-shrink-0 ${
+                          className={`w-5 h-5 ${poll.allowMultiple ? "rounded" : "rounded-full"} border-2 flex items-center justify-center flex-shrink-0 ${
                             isSelected
                               ? "border-[#4F46E5] bg-[#4F46E5]"
                               : "border-[#9CA3AF]"
                           }`}
                         >
-                          {isSelected && (
-                            poll.allowMultiple 
-                              ? <Check size={12} className="text-white" />
-                              : <div className="w-2 h-2 bg-white rounded-full"></div>
-                          )}
+                          {isSelected &&
+                            (poll.allowMultiple ? (
+                              <Check size={12} className="text-white" />
+                            ) : (
+                              <div className="w-2 h-2 bg-white rounded-full"></div>
+                            ))}
                         </div>
 
                         <div className="text-left">
@@ -233,9 +246,7 @@ function VotingPage() {
                       <ChevronRight
                         size={20}
                         className={`flex-shrink-0 ${
-                          isSelected
-                            ? "text-[#4F46E5]"
-                            : "text-[#9CA3AF]"
+                          isSelected ? "text-[#4F46E5]" : "text-[#9CA3AF]"
                         }`}
                       />
                     </button>
@@ -255,7 +266,9 @@ function VotingPage() {
                   }`}
                 >
                   <Check size={18} />
-                  {submitting ? "Submitting..." : `Submit Vote${poll.allowMultiple && selectedOptions.length > 1 ? 's' : ''}`}
+                  {submitting
+                    ? "Submitting..."
+                    : `Submit Vote${poll.allowMultiple && selectedOptions.length > 1 ? "s" : ""}`}
                 </button>
               )}
 
@@ -332,7 +345,7 @@ function VotingPage() {
                 <button
                   onClick={() => {
                     navigator.clipboard.writeText(
-                      `${window.location.origin}/poll/${voteId}`
+                      `${window.location.origin}/poll/${voteId}`,
                     );
                     alert("Link copied to clipboard!");
                   }}

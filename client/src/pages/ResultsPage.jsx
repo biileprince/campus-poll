@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useParams } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import { useGetResults } from "../hooks/useApi";
 
 import ResultsHeader from "../Components/Results/ResultsHeader";
@@ -7,10 +7,11 @@ import MetricsCard from "../Components/Results/MetricsCard";
 import VoteDistribution from "../Components/Results/VoteDistribution";
 import TurnoutChart from "../Components/Results/TurnoutChart";
 import ResultsSkeleton from "../Components/Results/ResultsSkeleton";
-import { Clock, PieChart } from "lucide-react";
+import { Clock, PieChart, ArrowLeft } from "lucide-react";
 
 export default function ResultsPage() {
   const { id: resultsId } = useParams();
+  const navigate = useNavigate();
   const { data, loading, error, execute } = useGetResults();
   const [results, setResults] = useState(null);
   const [chartType, setChartType] = useState("pie");
@@ -31,12 +32,12 @@ export default function ResultsPage() {
 
   const formatDate = (dateString) => {
     if (!dateString) return null;
-    return new Date(dateString).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
+    return new Date(dateString).toLocaleDateString("en-US", {
+      month: "short",
+      day: "numeric",
+      year: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
     });
   };
 
@@ -75,20 +76,30 @@ export default function ResultsPage() {
 
   return (
     <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+      {/* Back Button */}
+      <button
+        onClick={() => navigate("/polls")}
+        className="flex items-center gap-2 text-[#4F46E5] hover:text-[#4338CA] mb-4 text-sm font-medium"
+      >
+        <ArrowLeft size={16} />
+        Back to Polls
+      </button>
+
       <ResultsHeader title={results.question || "Poll Results"} />
 
       {/* Expiration Notice */}
       {results.expiresAt && (
-        <div className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
-          results.status === 'Expired' 
-            ? 'bg-gray-100 text-gray-600' 
-            : 'bg-amber-50 text-amber-700'
-        }`}>
+        <div
+          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
+            results.status === "Expired"
+              ? "bg-gray-100 text-gray-600"
+              : "bg-amber-50 text-amber-700"
+          }`}
+        >
           <Clock size={16} />
-          {results.status === 'Expired' 
+          {results.status === "Expired"
             ? `Poll expired on ${formatDate(results.expiresAt)}`
-            : `Poll expires on ${formatDate(results.expiresAt)}`
-          }
+            : `Poll expires on ${formatDate(results.expiresAt)}`}
         </div>
       )}
 

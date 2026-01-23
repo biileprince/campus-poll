@@ -31,7 +31,7 @@ function EditPollPage() {
         setExpiresAt(
           poll.expiresAt
             ? new Date(poll.expiresAt).toISOString().slice(0, 16)
-            : ""
+            : "",
         );
 
         // Check if poll has votes - can't edit content if votes exist
@@ -89,7 +89,7 @@ function EditPollPage() {
     }
 
     const uniqueOptions = new Set(
-      validOptions.map((opt) => opt.trim().toLowerCase())
+      validOptions.map((opt) => opt.trim().toLowerCase()),
     );
     if (uniqueOptions.size !== validOptions.length) {
       setError("Options must be unique (duplicates not allowed)");

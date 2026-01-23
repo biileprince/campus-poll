@@ -24,7 +24,7 @@ export default function Sidebar({ isOpen, onClose }) {
   const handleLogout = () => {
     logout();
     onClose?.();
-    navigate('/');
+    navigate("/");
   };
 
   const NavItem = ({ to, icon: Icon, children, onClick }) => (
@@ -55,14 +55,22 @@ export default function Sidebar({ isOpen, onClose }) {
             </div>
             Poll creator
           </span>
-          
+
           <div className="flex flex-col gap-2 flex-1">
-            <NavItem to="" icon={Home}>Home</NavItem>
-            <NavItem to="polls" icon={ListChecks}>Polls</NavItem>
-            <NavItem to="/create-poll" icon={Plus}>Create Poll</NavItem>
-            
+            <NavItem to="" icon={Home}>
+              Home
+            </NavItem>
+            <NavItem to="polls" icon={ListChecks}>
+              Polls
+            </NavItem>
+            <NavItem to="/create-poll" icon={Plus}>
+              Create Poll
+            </NavItem>
+
             {isAuthenticated && (
-              <NavItem to="/my-polls" icon={FolderOpen}>My Polls</NavItem>
+              <NavItem to="/my-polls" icon={FolderOpen}>
+                My Polls
+              </NavItem>
             )}
           </div>
 
@@ -74,7 +82,9 @@ export default function Sidebar({ isOpen, onClose }) {
                   <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
                     <User size={16} className="text-indigo-600" />
                   </div>
-                  <span className="truncate font-medium">{user?.name || user?.email}</span>
+                  <span className="truncate font-medium">
+                    {user?.name || user?.email}
+                  </span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -85,7 +95,9 @@ export default function Sidebar({ isOpen, onClose }) {
               </div>
             ) : (
               <div className="space-y-2">
-                <NavItem to="/login" icon={LogIn}>Sign In</NavItem>
+                <NavItem to="/login" icon={LogIn}>
+                  Sign In
+                </NavItem>
               </div>
             )}
           </div>
@@ -113,14 +125,22 @@ export default function Sidebar({ isOpen, onClose }) {
               <X size={24} />
             </button>
           </div>
-          
+
           <div className="flex flex-col gap-2 flex-1">
-            <NavItem to="" icon={Home} onClick={onClose}>Home</NavItem>
-            <NavItem to="polls" icon={ListChecks} onClick={onClose}>Polls</NavItem>
-            <NavItem to="/create-poll" icon={Plus} onClick={onClose}>Create Poll</NavItem>
-            
+            <NavItem to="" icon={Home} onClick={onClose}>
+              Home
+            </NavItem>
+            <NavItem to="polls" icon={ListChecks} onClick={onClose}>
+              Polls
+            </NavItem>
+            <NavItem to="/create-poll" icon={Plus} onClick={onClose}>
+              Create Poll
+            </NavItem>
+
             {isAuthenticated && (
-              <NavItem to="/my-polls" icon={FolderOpen} onClick={onClose}>My Polls</NavItem>
+              <NavItem to="/my-polls" icon={FolderOpen} onClick={onClose}>
+                My Polls
+              </NavItem>
             )}
           </div>
 
@@ -132,7 +152,9 @@ export default function Sidebar({ isOpen, onClose }) {
                   <div className="w-8 h-8 bg-indigo-100 rounded-full flex items-center justify-center">
                     <User size={16} className="text-indigo-600" />
                   </div>
-                  <span className="truncate font-medium">{user?.name || user?.email}</span>
+                  <span className="truncate font-medium">
+                    {user?.name || user?.email}
+                  </span>
                 </div>
                 <button
                   onClick={handleLogout}
@@ -143,7 +165,9 @@ export default function Sidebar({ isOpen, onClose }) {
               </div>
             ) : (
               <div className="space-y-2">
-                <NavItem to="/login" icon={LogIn} onClick={onClose}>Sign In</NavItem>
+                <NavItem to="/login" icon={LogIn} onClick={onClose}>
+                  Sign In
+                </NavItem>
               </div>
             )}
           </div>

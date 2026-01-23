@@ -149,7 +149,10 @@ export default function PollsPage() {
                     title="Copy voting link with poll question"
                   >
                     {copiedId === `vote-${poll.id}` ? (
-                      <Check size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                      <Check
+                        size={14}
+                        className="sm:w-4 sm:h-4 text-green-600"
+                      />
                     ) : (
                       <Copy size={14} className="sm:w-4 sm:h-4" />
                     )}
@@ -163,7 +166,10 @@ export default function PollsPage() {
                     title="Copy results link"
                   >
                     {copiedId === `results-${poll.id}` ? (
-                      <Check size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                      <Check
+                        size={14}
+                        className="sm:w-4 sm:h-4 text-green-600"
+                      />
                     ) : (
                       <Copy size={14} className="sm:w-4 sm:h-4" />
                     )}

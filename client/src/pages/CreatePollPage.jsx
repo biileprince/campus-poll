@@ -87,7 +87,7 @@ function CreatePollPage() {
 
     // Check for duplicate options
     const uniqueOptions = new Set(
-      validOptions.map((opt) => opt.trim().toLowerCase())
+      validOptions.map((opt) => opt.trim().toLowerCase()),
     );
     if (uniqueOptions.size !== validOptions.length) {
       setError("Options must be unique (duplicates not allowed)");
@@ -336,7 +336,6 @@ function CreatePollPage() {
                     />
                   </button>
                 </div>
-
               </div>
             </div>
 
@@ -399,7 +398,9 @@ function CreatePollPage() {
                 <div className="space-y-4">
                   <div>
                     <div className="flex justify-between items-center mb-2">
-                      <span className="text-sm text-gray-600">Polls Created</span>
+                      <span className="text-sm text-gray-600">
+                        Polls Created
+                      </span>
                       <span className="text-lg font-bold text-gray-900">
                         {userStats.pollsCreated}
                       </span>
@@ -407,7 +408,9 @@ function CreatePollPage() {
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-blue-600 h-2 rounded-full"
-                        style={{ width: `${Math.min(userStats.pollsCreated * 10, 100)}%` }}
+                        style={{
+                          width: `${Math.min(userStats.pollsCreated * 10, 100)}%`,
+                        }}
                       ></div>
                     </div>
                   </div>
@@ -424,7 +427,9 @@ function CreatePollPage() {
                     <div className="w-full bg-gray-200 rounded-full h-2">
                       <div
                         className="bg-green-500 h-2 rounded-full"
-                        style={{ width: `${Math.min(userStats.totalResponses, 100)}%` }}
+                        style={{
+                          width: `${Math.min(userStats.totalResponses, 100)}%`,
+                        }}
                       ></div>
                     </div>
                   </div>
@@ -448,11 +453,12 @@ function CreatePollPage() {
                 </div>
               ) : (
                 <div className="text-center text-gray-500 py-4">
-                  {isAuthenticated ? "Loading stats..." : "Sign in to see your stats"}
+                  {isAuthenticated
+                    ? "Loading stats..."
+                    : "Sign in to see your stats"}
                 </div>
               )}
             </div>
-
           </div>
         </div>
       </main>

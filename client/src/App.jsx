@@ -20,7 +20,7 @@ export default function App() {
           {/* Auth pages (no layout) */}
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
-          
+
           {/* Main app pages with layout */}
           <Route path="/" element={<AppLayout />}>
             <Route index element={<HomePage />} />
