@@ -11,6 +11,7 @@ const __dirname = path.dirname(__filename);
 
 // Import routes
 import pollRoutes from './routes/pollRoutes.js';
+import authRoutes from './routes/authRoutes.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
@@ -72,6 +73,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.static(path.join(__dirname, '../client/dist')));
 
 // API routes
+app.use('/api/auth', authRoutes);
 app.use('/api', pollRoutes);
 
 // Serve React app for all other routes (React Router handling)

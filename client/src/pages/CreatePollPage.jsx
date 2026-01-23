@@ -1,29 +1,48 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Lightbulb,
   X,
   Plus,
   Check,
-  Book,
   Loader2,
   Copy,
   ExternalLink,
+  Calendar,
 } from "lucide-react";
 import { createPoll } from "../services/api";
+import { useAuth } from "../context/AuthContext";
+import api from "../services/api";
 
 function CreatePollPage() {
   const navigate = useNavigate();
+  const { isAuthenticated } = useAuth();
   const [pollQuestion, setPollQuestion] = useState("");
   const [options, setOptions] = useState(["", ""]);
   const [allowMultiple, setAllowMultiple] = useState(false);
-  const [anonymous, setAnonymous] = useState(false);
+  const [expiresAt, setExpiresAt] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
   const [pollLinks, setPollLinks] = useState(null);
+  const [userStats, setUserStats] = useState(null);
 
   const MAX_OPTIONS = 10;
+
+  // Fetch user stats when authenticated
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (isAuthenticated) {
+        try {
+          const response = await api.get("/auth/stats");
+          setUserStats(response.data.data || response.data);
+        } catch (err) {
+          console.error("Failed to fetch user stats:", err);
+        }
+      }
+    };
+    fetchUserStats();
+  }, [isAuthenticated]);
 
   const addOption = () => {
     if (options.length >= MAX_OPTIONS) {
@@ -80,6 +99,8 @@ function CreatePollPage() {
       const response = await createPoll({
         question: pollQuestion.trim(),
         options: validOptions.map((opt) => opt.trim()),
+        expiresAt: expiresAt || null,
+        allowMultiple: allowMultiple,
       });
 
       // Show success and poll links
@@ -273,6 +294,26 @@ function CreatePollPage() {
               </h3>
 
               <div className="space-y-4">
+                {/* Expiration Date */}
+                <div className="space-y-2">
+                  <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
+                    <Calendar size={16} />
+                    Expiration Date (Optional)
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={expiresAt}
+                    onChange={(e) => setExpiresAt(e.target.value)}
+                    min={new Date().toISOString().slice(0, 16)}
+                    className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
+                  />
+                  <p className="text-xs text-gray-500">
+                    Leave empty for no expiration
+                  </p>
+                </div>
+
+                <hr className="border-gray-200" />
+
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-gray-700">
@@ -296,32 +337,10 @@ function CreatePollPage() {
                   </button>
                 </div>
 
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-gray-700">
-                      Anonymous voting
-                    </p>
-                    <p className="text-xs text-gray-500">
-                      Hide voter identities
-                    </p>
-                  </div>
-                  <button
-                    onClick={() => setAnonymous(!anonymous)}
-                    className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                      anonymous ? "bg-[#6366F1]" : "bg-gray-300"
-                    }`}
-                  >
-                    <span
-                      className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                        anonymous ? "translate-x-6" : "translate-x-1"
-                      }`}
-                    />
-                  </button>
-                </div>
               </div>
             </div>
 
-            {/* Action Buttons */}
+            {/* Action Button */}
             <div className="flex gap-3">
               <button
                 onClick={handleSubmit}
@@ -339,12 +358,6 @@ function CreatePollPage() {
                     Create Poll
                   </>
                 )}
-              </button>
-              <button
-                disabled={loading || success}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                Save as Draft
               </button>
             </div>
           </div>
@@ -382,70 +395,64 @@ function CreatePollPage() {
             <div className="bg-white rounded-lg shadow-sm p-6">
               <h3 className="font-semibold text-gray-900 mb-4">Your Stats</h3>
 
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">Polls Created</span>
-                    <span className="text-lg font-bold text-gray-900">24</span>
+              {userStats ? (
+                <div className="space-y-4">
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">Polls Created</span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {userStats.pollsCreated}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{ width: `${Math.min(userStats.pollsCreated * 10, 100)}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: "40%" }}
-                    ></div>
-                  </div>
-                </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">
-                      Total Responses
-                    </span>
-                    <span className="text-lg font-bold text-gray-900">
-                      1,847
-                    </span>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">
+                        Total Responses
+                      </span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {userStats.totalResponses.toLocaleString()}
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-green-500 h-2 rounded-full"
+                        style={{ width: `${Math.min(userStats.totalResponses, 100)}%` }}
+                      ></div>
+                    </div>
                   </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-green-500 h-2 rounded-full"
-                      style={{ width: "75%" }}
-                    ></div>
-                  </div>
-                </div>
 
-                <div>
-                  <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm text-gray-600">
-                      Engagement Rate
-                    </span>
-                    <span className="text-lg font-bold text-gray-900">76%</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div
-                      className="bg-blue-600 h-2 rounded-full"
-                      style={{ width: "76%" }}
-                    ></div>
+                  <div>
+                    <div className="flex justify-between items-center mb-2">
+                      <span className="text-sm text-gray-600">
+                        Engagement Rate
+                      </span>
+                      <span className="text-lg font-bold text-gray-900">
+                        {userStats.engagementRate}%
+                      </span>
+                    </div>
+                    <div className="w-full bg-gray-200 rounded-full h-2">
+                      <div
+                        className="bg-blue-600 h-2 rounded-full"
+                        style={{ width: `${userStats.engagementRate}%` }}
+                      ></div>
+                    </div>
                   </div>
                 </div>
-              </div>
+              ) : (
+                <div className="text-center text-gray-500 py-4">
+                  {isAuthenticated ? "Loading stats..." : "Sign in to see your stats"}
+                </div>
+              )}
             </div>
 
-            {/* Help Card */}
-            <div className="bg-white rounded-lg shadow-sm p-6">
-              <div className="flex items-center gap-2 mb-3">
-                <div className="w-8 h-8 bg-[#DBEAFE] rounded-full flex items-center justify-center">
-                  <span className="text-[#6366F1] font-bold text-sm">?</span>
-                </div>
-                <h3 className="font-semibold text-gray-900">Need Help?</h3>
-              </div>
-              <p className="text-sm text-gray-600 mb-4">
-                Check out our documentation or contact support for assistance.
-              </p>
-              <button className="w-full flex items-center justify-center gap-2 px-4 py-2 border border-gray-300 rounded-md text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                <Book size={16} />
-                View Documentation
-              </button>
-            </div>
           </div>
         </div>
       </main>

@@ -1,4 +1,5 @@
 import { useNavigate } from "react-router-dom";
+import { useState } from "react";
 import {
   BarChart3,
   Vote,
@@ -6,12 +7,14 @@ import {
   Calendar,
   Users,
   RefreshCw,
+  Check,
 } from "lucide-react";
 import { useGetAllPolls } from "../hooks/useApi";
 import { useEffect } from "react";
 
 export default function PollsPage() {
   const navigate = useNavigate();
+  const [copiedId, setCopiedId] = useState(null);
   const {
     data: pollsData,
     loading,
@@ -23,19 +26,19 @@ export default function PollsPage() {
     fetchPolls();
   }, []);
 
-  const copyToClipboard = (poll, type) => {
-    const url =
-      type === "vote"
-        ? `${window.location.origin}/poll/${poll.voteId}`
-        : `${window.location.origin}/results/${poll.resultsId}`;
+  const copyVoteLink = (poll) => {
+    const url = `${window.location.origin}/poll/${poll.voteId}`;
+    const text = `📊 ${poll.question}\n\nVote here: ${url}`;
+    navigator.clipboard.writeText(text);
+    setCopiedId(`vote-${poll.id}`);
+    setTimeout(() => setCopiedId(null), 2000);
+  };
 
-    const description =
-      type === "vote"
-        ? `Vote on this poll: "${poll.question}"\n${url}`
-        : `View results for: "${poll.question}"\n${url}`;
-
-    navigator.clipboard.writeText(description);
-    alert("Link with description copied to clipboard!");
+  const copyResultsLink = (poll) => {
+    const url = `${window.location.origin}/results/${poll.resultsId}`;
+    navigator.clipboard.writeText(url);
+    setCopiedId(`results-${poll.id}`);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const formatDate = (dateString) => {
@@ -141,21 +144,29 @@ export default function PollsPage() {
                   </button>
 
                   <button
-                    onClick={() => copyToClipboard(poll, "vote")}
+                    onClick={() => copyVoteLink(poll)}
                     className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs sm:text-sm"
-                    title="Copy voting link with description"
+                    title="Copy voting link with poll question"
                   >
-                    <Copy size={14} className="sm:w-4 sm:h-4" />
+                    {copiedId === `vote-${poll.id}` ? (
+                      <Check size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                    ) : (
+                      <Copy size={14} className="sm:w-4 sm:h-4" />
+                    )}
                     <span className="hidden sm:inline">Copy Vote Link</span>
                     <span className="sm:hidden">Vote Link</span>
                   </button>
 
                   <button
-                    onClick={() => copyToClipboard(poll, "results")}
+                    onClick={() => copyResultsLink(poll)}
                     className="flex items-center justify-center gap-2 px-3 sm:px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 text-xs sm:text-sm"
-                    title="Copy results link with description"
+                    title="Copy results link"
                   >
-                    <Copy size={14} className="sm:w-4 sm:h-4" />
+                    {copiedId === `results-${poll.id}` ? (
+                      <Check size={14} className="sm:w-4 sm:h-4 text-green-600" />
+                    ) : (
+                      <Copy size={14} className="sm:w-4 sm:h-4" />
+                    )}
                     <span className="hidden sm:inline">Copy Results Link</span>
                     <span className="sm:hidden">Results Link</span>
                   </button>

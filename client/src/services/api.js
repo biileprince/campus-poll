@@ -115,4 +115,46 @@ export const getPollResults = async (resultsId) => {
   }
 };
 
+/**
+ * Get user's polls
+ * @returns {Promise<Object>} User's polls
+ */
+export const getMyPolls = async () => {
+  try {
+    const response = await api.get('/my-polls');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Update a poll
+ * @param {string} resultsId - Results ID of the poll
+ * @param {Object} pollData - Updated poll data
+ * @returns {Promise<Object>} Updated poll
+ */
+export const updatePoll = async (resultsId, pollData) => {
+  try {
+    const response = await api.put(`/polls/${resultsId}`, pollData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Delete a poll
+ * @param {string} resultsId - Results ID of the poll
+ * @returns {Promise<Object>} Deletion response
+ */
+export const deletePoll = async (resultsId) => {
+  try {
+    const response = await api.delete(`/polls/${resultsId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export default api;

@@ -27,14 +27,18 @@ export const getAllPolls = async (req, res) => {
         // Calculate total votes for each poll
         const pollsWithStats = polls.map(poll => {
             const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+            const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
             return {
                 id: poll.id,
                 question: poll.question,
                 voteId: poll.voteId,
                 resultsId: poll.resultsId,
                 createdAt: poll.createdAt,
+                expiresAt: poll.expiresAt,
+                chartType: poll.chartType,
                 totalVotes: totalVotes,
                 optionCount: poll.options.length,
+                status: isExpired ? 'Expired' : 'Active',
             };
         });
 
@@ -46,6 +50,62 @@ export const getAllPolls = async (req, res) => {
         console.error('Error fetching polls:', error);
         return res.status(500).json({
             error: 'Internal server error while fetching polls',
+        });
+    }
+};
+
+/**
+ * Get polls created by the authenticated user
+ * @route GET /api/my-polls
+ */
+export const getMyPolls = async (req, res) => {
+    try {
+        const userId = req.user.id;
+
+        const polls = await prisma.poll.findMany({
+            where: {
+                creatorId: userId,
+            },
+            orderBy: {
+                createdAt: 'desc',
+            },
+            include: {
+                options: {
+                    select: {
+                        id: true,
+                        text: true,
+                        voteCount: true,
+                    },
+                },
+            },
+        });
+
+        const pollsWithStats = polls.map(poll => {
+            const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+            const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
+            return {
+                id: poll.id,
+                question: poll.question,
+                voteId: poll.voteId,
+                resultsId: poll.resultsId,
+                createdAt: poll.createdAt,
+                expiresAt: poll.expiresAt,
+                chartType: poll.chartType,
+                totalVotes: totalVotes,
+                optionCount: poll.options.length,
+                status: isExpired ? 'Expired' : 'Active',
+                canEdit: totalVotes === 0,
+            };
+        });
+
+        return res.status(200).json({
+            polls: pollsWithStats,
+            total: pollsWithStats.length,
+        });
+    } catch (error) {
+        console.error('Error fetching user polls:', error);
+        return res.status(500).json({
+            error: 'Internal server error while fetching your polls',
         });
     }
 };
@@ -106,6 +166,10 @@ export const createPoll = async (req, res) => {
         const poll = await prisma.poll.create({
             data: {
                 question: question.trim(),
+                creatorId: req.user?.id || null, // Link to creator if authenticated
+                expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
+                chartType: req.body.chartType || 'pie',
+                allowMultiple: req.body.allowMultiple || false,
                 options: {
                     create: validOptions.map(text => ({
                         text: text.trim(),
@@ -164,6 +228,13 @@ export const getPollByVoteId = async (req, res) => {
                         voteCount: true,
                     },
                 },
+                creator: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
             },
         });
 
@@ -172,6 +243,9 @@ export const getPollByVoteId = async (req, res) => {
                 error: 'Poll not found',
             });
         }
+
+        // Check if poll is expired
+        const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
 
         // Calculate total votes
         const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
@@ -183,7 +257,13 @@ export const getPollByVoteId = async (req, res) => {
             voteId: poll.voteId,
             resultsId: poll.resultsId,
             createdAt: poll.createdAt,
+            expiresAt: poll.expiresAt,
+            isExpired: isExpired,
+            allowMultiple: poll.allowMultiple,
             totalVotes: totalVotes,
+            creator: poll.creator ? {
+                name: poll.creator.name,
+            } : null,
             options: poll.options.map(option => ({
                 id: option.id,
                 text: option.text,
@@ -287,11 +367,22 @@ export const getPollResults = async (req, res) => {
 
         const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
 
+        // Check if poll is expired
+        const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
+        let status = 'Active';
+        if (isExpired) {
+            status = 'Expired';
+        } else if (totalVotes === 0) {
+            status = 'No votes yet';
+        }
+
         const response = {
             id: poll.id,
             question: poll.question,
             totalVotes,
-            status: totalVotes > 0 ? 'Active' : 'No votes yet',
+            status,
+            chartType: poll.chartType || 'pie',
+            expiresAt: poll.expiresAt,
             createdAt: poll.createdAt,
             options: poll.options.map(option => ({
                 id: option.id,
@@ -317,7 +408,7 @@ export const getPollResults = async (req, res) => {
 export const updatePoll = async (req, res) => {
     try {
         const { resultsId } = req.params;
-        const { question, options } = req.body;
+        const { question, options, expiresAt, chartType } = req.body;
 
         // Find the poll by resultsId
         const existingPoll = await prisma.poll.findUnique({
@@ -331,11 +422,18 @@ export const updatePoll = async (req, res) => {
             });
         }
 
-        // Check if poll has votes - only allow editing if no votes cast
-        const totalVotes = existingPoll.options.reduce((sum, opt) => sum + opt.voteCount, 0);
-        if (totalVotes > 0) {
+        // Check ownership - only creator can edit their polls
+        if (existingPoll.creatorId && req.user?.id !== existingPoll.creatorId) {
             return res.status(403).json({
-                error: 'Cannot edit poll that has received votes',
+                error: 'You are not authorized to edit this poll',
+            });
+        }
+
+        // Check if poll has votes - only allow editing question/options if no votes cast
+        const totalVotes = existingPoll.options.reduce((sum, opt) => sum + opt.voteCount, 0);
+        if (totalVotes > 0 && (question || options)) {
+            return res.status(403).json({
+                error: 'Cannot edit question or options after votes have been cast. You can still update expiration date and chart type.',
             });
         }
 
@@ -367,6 +465,8 @@ export const updatePoll = async (req, res) => {
             where: { id: existingPoll.id },
             data: {
                 question: updatedQuestion,
+                expiresAt: expiresAt !== undefined ? (expiresAt ? new Date(expiresAt) : null) : existingPoll.expiresAt,
+                chartType: chartType || existingPoll.chartType,
                 ...(options && {
                     options: {
                         create: updatedOptions,
@@ -414,6 +514,13 @@ export const deletePoll = async (req, res) => {
         if (!poll) {
             return res.status(404).json({
                 error: 'Poll not found',
+            });
+        }
+
+        // Check ownership - only creator can delete their polls
+        if (poll.creatorId && req.user?.id !== poll.creatorId) {
+            return res.status(403).json({
+                error: 'You are not authorized to delete this poll',
             });
         }
 

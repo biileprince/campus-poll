@@ -1,6 +1,7 @@
 import express from 'express';
-import { getAllPolls, createPoll, getPollByVoteId, castVote, getPollResults, updatePoll, deletePoll } from '../controllers/pollController.js';
+import { getAllPolls, getMyPolls, createPoll, getPollByVoteId, castVote, getPollResults, updatePoll, deletePoll } from '../controllers/pollController.js';
 import { createPollLimiter, voteLimiter, resultsLimiter } from '../middlewares/rateLimiter.js';
+import { protect, optionalAuth } from '../middlewares/authMiddleware.js';
 import {
     validateCreatePoll,
     validateGetPoll,
@@ -16,14 +17,17 @@ const router = express.Router();
 // GET /api/polls - Get all polls (list)
 router.get('/polls', getAllPolls);
 
-// POST /api/polls - Create a new poll
-router.post('/polls', createPollLimiter, validateCreatePoll, createPoll);
+// GET /api/my-polls - Get polls created by authenticated user
+router.get('/my-polls', protect, getMyPolls);
 
-// PUT /api/polls/:resultsId - Update a poll (only if no votes cast)
-router.put('/polls/:resultsId', createPollLimiter, validateUpdatePoll, updatePoll);
+// POST /api/polls - Create a new poll (optionally authenticated)
+router.post('/polls', createPollLimiter, optionalAuth, validateCreatePoll, createPoll);
 
-// DELETE /api/polls/:resultsId - Delete a poll
-router.delete('/polls/:resultsId', createPollLimiter, validateDeletePoll, deletePoll);
+// PUT /api/polls/:resultsId - Update a poll (only if no votes cast, owner only)
+router.put('/polls/:resultsId', createPollLimiter, optionalAuth, validateUpdatePoll, updatePoll);
+
+// DELETE /api/polls/:resultsId - Delete a poll (owner only)
+router.delete('/polls/:resultsId', createPollLimiter, optionalAuth, validateDeletePoll, deletePoll);
 
 // GET /api/poll/:voteId - Get poll for voting
 router.get('/poll/:voteId', validateGetPoll, getPollByVoteId);

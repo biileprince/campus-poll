@@ -10,25 +10,71 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  polls     Poll[]
+
+  @@map("users")
+}
+
 model Poll {
-  id          String   @id @default(cuid())
-  question    String
-  voteId      String   @unique @default(cuid()) // Unique ID for voting link
-  resultsId   String   @unique @default(cuid()) // Unique ID for results link
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
-  options     Option[]
+  id            String    @id @default(cuid())
+  question      String
+  voteId        String    @unique @default(cuid())
+  resultsId     String    @unique @default(cuid())
+  expiresAt     DateTime?
+  chartType     String    @default("pie")
+  allowMultiple Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  creatorId     String?
+  creator       User?     @relation(fields: [creatorId], references: [id], onDelete: SetNull)
+  
+  options       Option[]
+  questions     Question[]
 
   @@map("polls")
 }
 
 model Option {
-  id        String   @id @default(cuid())
-  text      String
-  voteCount Int      @default(0)
-  pollId    String
-  poll      Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
-  createdAt DateTime @default(now())
+  id         String   @id @default(cuid())
+  text       String
+  voteCount  Int      @default(0)
+  pollId     String?
+  poll       Poll?    @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  questionId String?
+  question   Question? @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
 
   @@map("options")
+}
+
+model Question {
+  id           String   @id @default(cuid())
+  text         String
+  type         String   @default("single")
+  order        Int      @default(0)
+  pollId       String
+  poll         Poll     @relation(fields: [pollId], references: [id], onDelete: Cascade)
+  options      Option[]
+  responses    Response[]
+  createdAt    DateTime @default(now())
+
+  @@map("questions")
+}
+
+model Response {
+  id         String   @id @default(cuid())
+  text       String?
+  questionId String
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  createdAt  DateTime @default(now())
+
+  @@map("responses")
 }
