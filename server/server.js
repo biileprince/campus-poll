@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import morgan from 'morgan';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -17,6 +18,9 @@ import authRoutes from './routes/authRoutes.js';
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { sanitizeData, preventParameterPollution, sanitizeXSS, setSecurityHeaders } from './middlewares/sanitizer.js';
+
+// Import Swagger config
+import { swaggerSpec } from './config/swagger.js';
 
 // Load environment variables
 dotenv.config();
@@ -71,6 +75,13 @@ app.use(express.urlencoded({ extended: true }));
 
 // Serve static files from React build
 app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Swagger UI setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "Campus Poll API Documentation"
+}));
 
 // API routes
 app.use('/api/auth', authRoutes);
