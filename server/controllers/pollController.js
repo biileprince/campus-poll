@@ -1,31 +1,52 @@
 import prisma from '../utils/prisma.js';
 
 /**
- * Get all polls (recent polls list)
- * @route GET /api/polls
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ * Get all polls with pagination, search, status filter, and sort
+ * @route GET /api/polls?page=1&limit=12&search=keyword&status=active&sort=newest
  */
 export const getAllPolls = async (req, res) => {
     try {
+        const page = Math.max(1, parseInt(req.query.page) || 1);
+        const limit = Math.min(50, Math.max(1, parseInt(req.query.limit) || 12));
+        const search = req.query.search?.trim() || '';
+        const statusFilter = req.query.status || 'all'; // all, active, expired
+        const sortBy = req.query.sort || 'newest'; // newest, oldest, most_votes, least_votes
+
+        // Build where clause
+        const where = {};
+        if (search) {
+            where.question = { contains: search, mode: 'insensitive' };
+        }
+        // Status filter via expiry
+        if (statusFilter === 'active') {
+            where.OR = [
+                { expiresAt: null },
+                { expiresAt: { gt: new Date() } },
+            ];
+        } else if (statusFilter === 'expired') {
+            where.expiresAt = { lt: new Date(), not: null };
+        }
+
+        // Determine sort order
+        let orderBy = { createdAt: 'desc' };
+        if (sortBy === 'oldest') orderBy = { createdAt: 'asc' };
+
+        // Get total count for pagination
+        const total = await prisma.poll.count({ where: Object.keys(where).length ? where : undefined });
+        const skip = (page - 1) * limit;
+
         const polls = await prisma.poll.findMany({
-            orderBy: {
-                createdAt: 'desc',
-            },
-            take: 50, // Limit to 50 most recent polls
+            where: Object.keys(where).length ? where : undefined,
+            orderBy,
+            skip,
+            take: limit,
             include: {
-                options: {
-                    select: {
-                        id: true,
-                        text: true,
-                        voteCount: true,
-                    },
-                },
+                options: { select: { id: true, text: true, voteCount: true } },
+                questions: { select: { id: true, type: true } },
             },
         });
 
-        // Calculate total votes for each poll
-        const pollsWithStats = polls.map(poll => {
+        let pollsWithStats = polls.map(poll => {
             const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
             const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
             return {
@@ -36,21 +57,31 @@ export const getAllPolls = async (req, res) => {
                 createdAt: poll.createdAt,
                 expiresAt: poll.expiresAt,
                 chartType: poll.chartType,
-                totalVotes: totalVotes,
+                totalVotes,
                 optionCount: poll.options.length,
+                questionCount: poll.questions?.length || 0,
+                hasOpenEnded: poll.questions?.some(q => q.type === 'open_ended') || false,
                 status: isExpired ? 'Expired' : 'Active',
             };
         });
 
+        // Client-side sort for vote-based ordering (can't do this at DB level easily)
+        if (sortBy === 'most_votes') {
+            pollsWithStats.sort((a, b) => b.totalVotes - a.totalVotes);
+        } else if (sortBy === 'least_votes') {
+            pollsWithStats.sort((a, b) => a.totalVotes - b.totalVotes);
+        }
+
+        const totalPages = Math.ceil(total / limit);
+
         return res.status(200).json({
             polls: pollsWithStats,
-            total: pollsWithStats.length,
+            total,
+            pagination: { page, limit, total, totalPages, hasNext: page < totalPages, hasPrev: page > 1 },
         });
     } catch (error) {
         console.error('Error fetching polls:', error);
-        return res.status(500).json({
-            error: 'Internal server error while fetching polls',
-        });
+        return res.status(500).json({ error: 'Internal server error while fetching polls' });
     }
 };
 
@@ -111,146 +142,154 @@ export const getMyPolls = async (req, res) => {
 };
 
 /**
- * Create a new poll with options
+ * Create a new poll — supports single-question (legacy) and multi-question format
  * @route POST /api/polls
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
+ *
+ * Legacy body: { question, options: string[], expiresAt?, allowMultiple? }
+ * Multi-question body: { question, questions: [{ text, type, options: string[] }], expiresAt? }
  */
 export const createPoll = async (req, res) => {
     try {
-        const { question, options } = req.body;
+        const { question, options, questions, expiresAt, chartType, allowMultiple } = req.body;
 
-        // Validation
-        if (!question || typeof question !== 'string') {
-            return res.status(400).json({
-                error: 'Question is required and must be a string',
+        // Validate poll title/question
+        if (!question || typeof question !== 'string' || question.trim().length < 5) {
+            return res.status(400).json({ error: 'Poll question is required (at least 5 characters)' });
+        }
+
+        // Multi-question format
+        if (questions && Array.isArray(questions) && questions.length > 0) {
+            // Validate each question
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                if (!q.text || q.text.trim().length < 3) {
+                    return res.status(400).json({ error: `Question ${i + 1} is too short (at least 3 characters)` });
+                }
+                const type = q.type || 'single';
+                if (!['single', 'multiple', 'open_ended'].includes(type)) {
+                    return res.status(400).json({ error: `Question ${i + 1} has an invalid type. Use: single, multiple, or open_ended` });
+                }
+                // Choice-based questions need at least 2 options
+                if (type !== 'open_ended') {
+                    const validOpts = (q.options || []).filter(o => o && o.trim().length > 0);
+                    if (validOpts.length < 2) {
+                        return res.status(400).json({ error: `Question ${i + 1} needs at least 2 choices` });
+                    }
+                }
+            }
+
+            // Create poll with questions
+            const poll = await prisma.poll.create({
+                data: {
+                    question: question.trim(),
+                    creatorId: req.user?.id || null,
+                    expiresAt: expiresAt ? new Date(expiresAt) : null,
+                    chartType: chartType || 'pie',
+                    allowMultiple: false,
+                    questions: {
+                        create: questions.map((q, idx) => ({
+                            text: q.text.trim(),
+                            type: q.type || 'single',
+                            order: idx,
+                            options: {
+                                create: (q.type === 'open_ended' ? [] : (q.options || []))
+                                    .filter(o => o && o.trim().length > 0)
+                                    .map(text => ({ text: text.trim() })),
+                            },
+                        })),
+                    },
+                },
+                include: { questions: { include: { options: true }, orderBy: { order: 'asc' } } },
+            });
+
+            return res.status(201).json({
+                id: poll.id,
+                voteId: poll.voteId,
+                resultsId: poll.resultsId,
+                votingUrl: `/poll/${poll.voteId}`,
+                resultsUrl: `/results/${poll.resultsId}`,
             });
         }
 
+        // Legacy single-question format (backward compatible)
         if (!options || !Array.isArray(options)) {
-            return res.status(400).json({
-                error: 'Options are required and must be an array',
-            });
+            return res.status(400).json({ error: 'Options are required and must be an array' });
         }
 
-        if (options.length < 2) {
-            return res.status(400).json({
-                error: 'At least 2 options are required',
-            });
-        }
-
-        if (options.length > 10) {
-            return res.status(400).json({
-                error: 'Maximum 10 options allowed',
-            });
-        }
-
-        // Filter out empty options and validate
         const validOptions = options.filter(opt => opt && opt.trim().length > 0);
-
         if (validOptions.length < 2) {
-            return res.status(400).json({
-                error: 'At least 2 non-empty options are required',
-            });
+            return res.status(400).json({ error: 'At least 2 non-empty options are required' });
+        }
+        if (validOptions.length > 10) {
+            return res.status(400).json({ error: 'Maximum 10 options allowed' });
         }
 
-        // Check for duplicate options
         const uniqueOptions = [...new Set(validOptions.map(opt => opt.trim().toLowerCase()))];
         if (uniqueOptions.length !== validOptions.length) {
-            return res.status(400).json({
-                error: 'Duplicate options are not allowed',
-            });
+            return res.status(400).json({ error: 'Duplicate options are not allowed' });
         }
 
-        // Create poll with options using Prisma transaction
         const poll = await prisma.poll.create({
             data: {
                 question: question.trim(),
-                creatorId: req.user?.id || null, // Link to creator if authenticated
-                expiresAt: req.body.expiresAt ? new Date(req.body.expiresAt) : null,
-                chartType: req.body.chartType || 'pie',
-                allowMultiple: req.body.allowMultiple || false,
+                creatorId: req.user?.id || null,
+                expiresAt: expiresAt ? new Date(expiresAt) : null,
+                chartType: chartType || 'pie',
+                allowMultiple: allowMultiple || false,
                 options: {
-                    create: validOptions.map(text => ({
-                        text: text.trim(),
-                    })),
+                    create: validOptions.map(text => ({ text: text.trim() })),
                 },
             },
-            include: {
-                options: true,
-            },
+            include: { options: true },
         });
 
-        // Construct response
-        const response = {
+        return res.status(201).json({
             id: poll.id,
             voteId: poll.voteId,
             resultsId: poll.resultsId,
             votingUrl: `/poll/${poll.voteId}`,
             resultsUrl: `/results/${poll.resultsId}`,
-        };
-
-        return res.status(201).json(response);
+        });
     } catch (error) {
         console.error('Error creating poll:', error);
-        return res.status(500).json({
-            error: 'Internal server error while creating poll',
-        });
+        return res.status(500).json({ error: 'Internal server error while creating poll' });
     }
 };
 
 /**
- * Get poll by voteId for voting
+ * Get poll by voteId for voting (supports both legacy and multi-question)
  * @route GET /api/poll/:voteId
- * @param {Object} req - Express request object
- * @param {Object} res - Express response object
  */
 export const getPollByVoteId = async (req, res) => {
     try {
         const { voteId } = req.params;
 
         if (!voteId) {
-            return res.status(400).json({
-                error: 'Vote ID is required',
-            });
+            return res.status(400).json({ error: 'Vote ID is required' });
         }
 
-        // Find poll by voteId
         const poll = await prisma.poll.findUnique({
-            where: {
-                voteId: voteId,
-            },
+            where: { voteId },
             include: {
-                options: {
-                    select: {
-                        id: true,
-                        text: true,
-                        voteCount: true,
+                options: { select: { id: true, text: true, voteCount: true } },
+                questions: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                        options: { select: { id: true, text: true, voteCount: true } },
                     },
                 },
-                creator: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                    },
-                },
+                creator: { select: { id: true, name: true, email: true } },
             },
         });
 
         if (!poll) {
-            return res.status(404).json({
-                error: 'Poll not found',
-            });
+            return res.status(404).json({ error: 'Poll not found' });
         }
 
-        // Check if poll is expired
         const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
+        const totalVotes = poll.options.reduce((sum, o) => sum + o.voteCount, 0);
+        const isMultiQuestion = poll.questions && poll.questions.length > 0;
 
-        // Calculate total votes
-        const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
-
-        // Return poll data with voteCount set to 0 for all options (hide actual votes)
         const response = {
             id: poll.id,
             question: poll.question,
@@ -258,25 +297,27 @@ export const getPollByVoteId = async (req, res) => {
             resultsId: poll.resultsId,
             createdAt: poll.createdAt,
             expiresAt: poll.expiresAt,
-            isExpired: isExpired,
+            isExpired,
             allowMultiple: poll.allowMultiple,
-            totalVotes: totalVotes,
-            creator: poll.creator ? {
-                name: poll.creator.name,
-            } : null,
-            options: poll.options.map(option => ({
-                id: option.id,
-                text: option.text,
-                voteCount: 0, // Hide vote counts from voters
-            })),
+            totalVotes,
+            isMultiQuestion,
+            creator: poll.creator ? { name: poll.creator.name } : null,
+            // Legacy options (for single-question polls)
+            options: poll.options.map(o => ({ id: o.id, text: o.text, voteCount: 0 })),
+            // Multi-question data
+            questions: isMultiQuestion ? poll.questions.map(q => ({
+                id: q.id,
+                text: q.text,
+                type: q.type,
+                order: q.order,
+                options: q.options.map(o => ({ id: o.id, text: o.text, voteCount: 0 })),
+            })) : [],
         };
 
         return res.status(200).json(response);
     } catch (error) {
         console.error('Error fetching poll:', error);
-        return res.status(500).json({
-            error: 'Internal server error while fetching poll',
-        });
+        return res.status(500).json({ error: 'Internal server error while fetching poll' });
     }
 };
 
@@ -315,7 +356,7 @@ export const castVote = async (req, res) => {
 
         const updatedOption = await prisma.option.update({
             where: { id: optionId },
-            data: { voteCount: selectedOption.voteCount + 1 },
+            data: { voteCount: { increment: 1 } },
         });
 
         return res.status(200).json({
@@ -331,6 +372,55 @@ export const castVote = async (req, res) => {
     }
 };
 
+/**
+ * Submit a text response for an open-ended question
+ * @route POST /api/respond/:questionId
+ */
+export const submitResponse = async (req, res) => {
+    try {
+        const { questionId } = req.params;
+        const { text, voteId } = req.body;
+
+        if (!questionId || !text || !text.trim()) {
+            return res.status(400).json({ error: 'Question ID and text are required' });
+        }
+
+        // Verify the question exists and belongs to the poll
+        const question = await prisma.question.findUnique({
+            where: { id: questionId },
+            include: { poll: true },
+        });
+
+        if (!question) {
+            return res.status(404).json({ error: 'Question not found' });
+        }
+
+        if (question.type !== 'open_ended') {
+            return res.status(400).json({ error: 'This question does not accept text responses' });
+        }
+
+        // Check if poll is expired
+        if (question.poll.expiresAt && new Date(question.poll.expiresAt) < new Date()) {
+            return res.status(400).json({ error: 'This poll is closed' });
+        }
+
+        const response = await prisma.response.create({
+            data: {
+                text: text.trim().slice(0, 1000), // Limit to 1000 chars
+                questionId,
+            },
+        });
+
+        return res.status(201).json({
+            success: true,
+            message: 'Response submitted',
+            response: { id: response.id, text: response.text },
+        });
+    } catch (error) {
+        console.error('Error submitting response:', error);
+        return res.status(500).json({ error: 'Failed to submit response' });
+    }
+};
 
 /**
  * Get poll results by resultsId

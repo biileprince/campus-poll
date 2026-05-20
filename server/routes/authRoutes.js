@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, getMe, getUserStats, updateProfile, changePassword } from '../controllers/authController.js';
+import { register, login, googleAuth, getMe, getUserStats, updateProfile, changePassword } from '../controllers/authController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { handleValidationErrors } from '../middlewares/validator.js';
 import { authLimiter } from '../middlewares/rateLimiter.js';
@@ -217,6 +217,9 @@ router.post('/register', authLimiter, registerValidation, handleValidationErrors
  *               $ref: '#/components/schemas/Error'
  */
 router.post('/login', authLimiter, loginValidation, handleValidationErrors, login);
+
+// Google OAuth
+router.post('/google', authLimiter, googleAuth);
 
 /**
  * @swagger

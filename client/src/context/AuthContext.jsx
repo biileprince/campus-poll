@@ -53,7 +53,7 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       let errorMessage = "Login failed";
-      
+
       if (err.response?.status === 401) {
         errorMessage = "Invalid email or password";
       } else if (err.response?.status === 429) {
@@ -63,7 +63,7 @@ export const AuthProvider = ({ children }) => {
       } else if (err.response?.data?.message || err.response?.data?.error) {
         errorMessage = err.response.data.message || err.response.data.error;
       }
-      
+
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }
@@ -86,11 +86,12 @@ export const AuthProvider = ({ children }) => {
       return { success: true };
     } catch (err) {
       let errorMessage = "Registration failed";
-      
+
       if (err.response?.status === 409) {
         errorMessage = "An account with this email already exists";
       } else if (err.response?.status === 400) {
-        errorMessage = err.response?.data?.error || "Please check your input and try again";
+        errorMessage =
+          err.response?.data?.error || "Please check your input and try again";
       } else if (err.response?.status === 429) {
         errorMessage = "Too many registration attempts. Please try again later";
       } else if (err.response?.status === 500) {
@@ -98,7 +99,7 @@ export const AuthProvider = ({ children }) => {
       } else if (err.response?.data?.message || err.response?.data?.error) {
         errorMessage = err.response.data.message || err.response.data.error;
       }
-      
+
       setError(errorMessage);
       return { success: false, error: errorMessage };
     }

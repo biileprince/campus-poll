@@ -1,288 +1,167 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Mail, Lock, Eye, EyeOff, Loader2, UserPlus, User } from "lucide-react";
 import { useAuth } from "../context/AuthContext";
+import { Eye, EyeOff, UserPlus, Vote, Loader2, Check, X } from "lucide-react";
+import api from "../services/api";
 
-function RegisterPage() {
+const PASSWORD_RULES = [
+  { test: (p) => p.length >= 6, label: "At least 6 characters" },
+  { test: (p) => /\d/.test(p), label: "Has a number" },
+];
+
+export default function RegisterPage() {
+  const { register, error: authError, clearError } = useAuth();
   const navigate = useNavigate();
-  const { register } = useAuth();
 
-  const [formData, setFormData] = useState({
-    name: "",
-    email: "",
-    password: "",
-    confirmPassword: "",
-  });
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    setError("");
-  };
-
-  const validateForm = () => {
-    if (!formData.name.trim()) {
-      setError("Name is required");
-      return false;
-    }
-
-    if (formData.name.trim().length < 2) {
-      setError("Name must be at least 2 characters");
-      return false;
-    }
-
-    if (!formData.email.trim()) {
-      setError("Email is required");
-      return false;
-    }
-
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(formData.email)) {
-      setError("Please enter a valid email address");
-      return false;
-    }
-
-    if (!formData.password) {
-      setError("Password is required");
-      return false;
-    }
-
-    if (formData.password.length < 6) {
-      setError("Password must be at least 6 characters");
-      return false;
-    }
-
-    if (!/\d/.test(formData.password)) {
-      setError("Password must contain at least one number");
-      return false;
-    }
-
-    if (formData.password !== formData.confirmPassword) {
-      setError("Passwords do not match");
-      return false;
-    }
-
-    return true;
-  };
+  const [googleLoading, setGoogleLoading] = useState(false);
+  const [localError, setLocalError] = useState("");
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
-
-    if (!validateForm()) {
-      return;
-    }
-
-    try {
-      setLoading(true);
-      const result = await register(
-        formData.email,
-        formData.password,
-        formData.name,
-      );
-
-      if (result.success) {
-        navigate("/my-polls", { replace: true });
-      } else {
-        setError(result.error);
-      }
-    } catch (err) {
-      setError("An unexpected error occurred. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+    setLocalError(""); clearError();
+    if (!email.trim() || !password.trim()) { setLocalError("Please fill in all required fields"); return; }
+    if (password.length < 6) { setLocalError("Password needs at least 6 characters"); return; }
+    if (!/\d/.test(password)) { setLocalError("Password needs at least one number"); return; }
+    setLoading(true);
+    const result = await register(email, password, name || undefined);
+    setLoading(false);
+    if (result.success) navigate("/");
   };
 
-  return (
-    <div className="bg-gray-50 min-h-screen flex items-center justify-center p-4">
-      <div className="w-full max-w-md">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-indigo-600 rounded-2xl mb-4">
-            <UserPlus className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 mb-2">
-            Create Account
-          </h1>
-          <p className="text-gray-500 text-sm">
-            Sign up to create and manage your polls
-          </p>
-        </div>
+  const handleGoogleSignup = () => {
+    if (!window.google) { setLocalError("Google sign-in is not available right now. Please use email."); return; }
+    setGoogleLoading(true); setLocalError(""); clearError();
 
-        {/* Register Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-200 p-6 sm:p-8">
-          {/* Error Message */}
-          {error && (
-            <div className="mb-6 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg">
-              <p className="text-sm font-medium">{error}</p>
+    window.google.accounts.id.initialize({
+      client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      callback: async (response) => {
+        try {
+          const res = await api.post("/auth/google", { credential: response.credential });
+          const { token } = res.data.data || res.data;
+          localStorage.setItem("token", token);
+          api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+          window.location.href = "/";
+        } catch (err) {
+          setLocalError(err.response?.data?.error || err.message || "Google sign-up failed");
+          setGoogleLoading(false);
+        }
+      },
+    });
+
+    window.google.accounts.id.prompt((notification) => {
+      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
+        const btnContainer = document.getElementById("google-btn-container");
+        if (btnContainer) {
+          btnContainer.innerHTML = "";
+          window.google.accounts.id.renderButton(btnContainer, { theme: "outline", size: "large", width: "100%", text: "signup_with" });
+        }
+        setGoogleLoading(false);
+      }
+    });
+  };
+
+  const errorMessage = localError || authError;
+  const passwordStrength = PASSWORD_RULES.filter((r) => r.test(password)).length;
+
+  return (
+    <div className="min-h-screen flex">
+      {/* Left — Image */}
+      <div className="hidden lg:block lg:w-1/2 relative">
+        <img src="/auth-bg.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
+        <div className="absolute inset-0 bg-gray-900/50" />
+        <div className="relative flex flex-col justify-between h-full p-12">
+          <Link to="/" className="flex items-center gap-2.5">
+            <div className="w-9 h-9 rounded-xl bg-white/20 flex items-center justify-center"><Vote size={18} className="text-white" /></div>
+            <span className="text-lg font-bold text-white tracking-tight">Campus Poll</span>
+          </Link>
+          <div>
+            <h1 className="text-4xl font-extrabold text-white leading-tight mb-4">Start creating<br />polls today.</h1>
+            <p className="text-white/70 text-base max-w-sm leading-relaxed">Sign up to create, manage, and track your polls. It only takes a few seconds.</p>
+          </div>
+          <p className="text-white/30 text-xs">© {new Date().getFullYear()} Campus Poll</p>
+        </div>
+      </div>
+
+      {/* Right — Form */}
+      <div className="flex-1 flex items-center justify-center px-6 py-12 bg-gray-50">
+        <div className="w-full max-w-md animate-fade-in-up">
+          <div className="lg:hidden flex items-center gap-2.5 mb-8">
+            <Link to="/" className="flex items-center gap-2.5">
+              <div className="w-9 h-9 rounded-xl bg-brand-600 flex items-center justify-center"><Vote size={18} className="text-white" /></div>
+              <span className="text-lg font-bold text-gray-900 tracking-tight">Campus Poll</span>
+            </Link>
+          </div>
+
+          <h2 className="text-2xl font-bold text-gray-900 mb-1">Create an account</h2>
+          <p className="text-sm text-gray-500 mb-6">Sign up so you can manage your polls later.</p>
+
+          {errorMessage && (
+            <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium animate-scale-in" style={{ backgroundColor: "var(--error-50)", color: "var(--error-700)", border: "1px solid var(--error-100)" }}>
+              {errorMessage}
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Name Field */}
-            <div>
-              <label
-                htmlFor="name"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Full Name
-              </label>
-              <div className="relative">
-                <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="text"
-                  id="name"
-                  name="name"
-                  value={formData.name}
-                  onChange={handleChange}
-                  placeholder="John Doe"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  autoComplete="name"
-                />
-              </div>
-            </div>
+          {/* Google */}
+          <button onClick={handleGoogleSignup} disabled={googleLoading} className="btn-google mb-4">
+            {googleLoading ? (
+              <Loader2 size={18} className="animate-spin" />
+            ) : (
+              <svg width="18" height="18" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92a5.06 5.06 0 0 1-2.2 3.32v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.1z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+            )}
+            Continue with Google
+          </button>
+          <div id="google-btn-container" className="mb-4"></div>
 
-            {/* Email Field */}
-            <div>
-              <label
-                htmlFor="email"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Email Address
-              </label>
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type="email"
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleChange}
-                  placeholder="Enter your email here"
-                  className="w-full pl-10 pr-4 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  autoComplete="email"
-                />
-              </div>
-            </div>
+          <div className="divider mb-4">or</div>
 
-            {/* Password Field */}
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label
-                htmlFor="password"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Name <span className="text-gray-400 font-normal">(optional)</span></label>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Enter your name" className="input" autoComplete="name" />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Email <span className="text-red-500">*</span></label>
+              <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="Enter your email" className="input" autoComplete="email" required />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password <span className="text-red-500">*</span></label>
               <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showPassword ? "text" : "password"}
-                  id="password"
-                  name="password"
-                  value={formData.password}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
+                <input type={showPassword ? "text" : "password"} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="Create a password" className="input pr-10" autoComplete="new-password" required />
+                <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                 </button>
               </div>
-              <p className="mt-1 text-xs text-gray-500">
-                At least 6 characters with one number
-              </p>
-            </div>
-
-            {/* Confirm Password Field */}
-            <div>
-              <label
-                htmlFor="confirmPassword"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                Confirm Password
-              </label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                <input
-                  type={showConfirmPassword ? "text" : "password"}
-                  id="confirmPassword"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
-                  onChange={handleChange}
-                  placeholder="••••••••"
-                  className="w-full pl-10 pr-12 py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-colors"
-                  autoComplete="new-password"
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                >
-                  {showConfirmPassword ? (
-                    <EyeOff className="w-5 h-5" />
-                  ) : (
-                    <Eye className="w-5 h-5" />
-                  )}
-                </button>
-              </div>
-            </div>
-
-            {/* Submit Button */}
-            <button
-              type="submit"
-              disabled={loading}
-              className="w-full flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white font-semibold py-3 px-4 rounded-lg transition-colors"
-            >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 animate-spin" />
-                  Creating account...
-                </>
-              ) : (
-                <>
-                  <UserPlus className="w-5 h-5" />
-                  Create Account
-                </>
+              {password.length > 0 && (
+                <div className="mt-3 space-y-2 animate-fade-in">
+                  <div className="flex gap-1">
+                    {PASSWORD_RULES.map((_, i) => (
+                      <div key={i} className="h-1 flex-1 rounded-full transition-colors" style={{ backgroundColor: i < passwordStrength ? (passwordStrength === PASSWORD_RULES.length ? "var(--success-500)" : "var(--warning-500)") : "var(--gray-200)" }} />
+                    ))}
+                  </div>
+                  <div className="space-y-1">
+                    {PASSWORD_RULES.map((rule, i) => {
+                      const pass = rule.test(password);
+                      return <div key={i} className="flex items-center gap-2 text-xs" style={{ color: pass ? "var(--success-600)" : "var(--gray-400)" }}>{pass ? <Check size={12} /> : <X size={12} />} {rule.label}</div>;
+                    })}
+                  </div>
+                </div>
               )}
+            </div>
+            <button type="submit" disabled={loading} className="btn-primary w-full py-3 text-base">
+              {loading ? (<><Loader2 size={18} className="animate-spin" /> Creating account...</>) : (<><UserPlus size={18} /> Create Account</>)}
             </button>
           </form>
 
-          {/* Divider */}
-          <div className="mt-6 pt-6 border-t border-gray-200 text-center">
-            <p className="text-gray-600 text-sm">
-              Already have an account?{" "}
-              <Link
-                to="/login"
-                className="text-indigo-600 hover:text-indigo-700 font-semibold"
-              >
-                Sign In
-              </Link>
-            </p>
-          </div>
-        </div>
-
-        {/* Back to Home */}
-        <div className="mt-6 text-center">
-          <Link to="/" className="text-gray-500 hover:text-gray-700 text-sm">
-            ← Back to Home
-          </Link>
+          <p className="text-center text-sm text-gray-500 mt-6">
+            Already have an account? <Link to="/login" className="font-semibold text-brand-600 hover:underline">Sign in</Link>
+          </p>
         </div>
       </div>
     </div>
   );
 }
-
-export default RegisterPage;

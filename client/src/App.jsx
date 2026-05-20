@@ -1,4 +1,4 @@
-import TestSharePage from "./TestSharePage.jsx";
+
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { AuthProvider } from "./context/AuthContext";
 import CreatePollPage from "./pages/CreatePollPage";
@@ -30,7 +30,7 @@ export default function App() {
             <Route path="poll/:voteId" element={<VotePage />} />
             <Route path="results/:id" element={<ResultsPage />} />
             <Route path="my-polls" element={<MyPollsPage />} />
-            <Route path="share" element={<TestSharePage />} />
+
           </Route>
         </Routes>
       </BrowserRouter>

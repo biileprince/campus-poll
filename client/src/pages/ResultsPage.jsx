@@ -7,7 +7,21 @@ import MetricsCard from "../Components/Results/MetricsCard";
 import VoteDistribution from "../Components/Results/VoteDistribution";
 import TurnoutChart from "../Components/Results/TurnoutChart";
 import ResultsSkeleton from "../Components/Results/ResultsSkeleton";
-import { Clock, PieChart, ArrowLeft } from "lucide-react";
+import {
+  Clock,
+  ArrowLeft,
+  BarChart3,
+  PieChart,
+  Copy,
+  Check,
+  Link2,
+} from "lucide-react";
+
+const CHART_TYPES = [
+  { value: "pie", label: "Pie", icon: PieChart },
+  { value: "donut", label: "Donut", icon: PieChart },
+  { value: "bar", label: "Bar", icon: BarChart3 },
+];
 
 export default function ResultsPage() {
   const { id: resultsId } = useParams();
@@ -15,6 +29,7 @@ export default function ResultsPage() {
   const { data, loading, error, execute } = useGetResults();
   const [results, setResults] = useState(null);
   const [chartType, setChartType] = useState("pie");
+  const [copiedLink, setCopiedLink] = useState(false);
   const hasFetched = useRef(false);
 
   useEffect(() => {
@@ -41,102 +56,134 @@ export default function ResultsPage() {
     });
   };
 
-  /* ---------- LOADING ---------- */
+  const copyResultsLink = async () => {
+    try {
+      await navigator.clipboard.writeText(window.location.href);
+      setCopiedLink(true);
+      setTimeout(() => setCopiedLink(false), 2000);
+    } catch {
+      /* silent */
+    }
+  };
+
   if (loading) {
+    return <ResultsSkeleton />;
+  }
+
+  if (error) {
     return (
-      <div className="p-6">
-        <ResultsSkeleton />
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="card-flat p-8 max-w-md text-center animate-scale-in">
+          <div className="w-12 h-12 rounded-xl bg-red-50 flex items-center justify-center mx-auto mb-4">
+            <BarChart3 size={24} style={{ color: "var(--error-500)" }} />
+          </div>
+          <h2 className="text-lg font-bold text-gray-900 mb-2">
+            Failed to Load Results
+          </h2>
+          <p className="text-sm text-gray-500 mb-5">{error}</p>
+          <button onClick={() => navigate("/polls")} className="btn-primary">
+            Browse Polls
+          </button>
+        </div>
       </div>
     );
   }
 
-  /* ---------- ERROR ---------- */
-  if (error) {
+  if (!results) {
     return (
-      <div className="p-6 text-red-500">Failed to load results: {error}</div>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <p className="text-gray-400 text-sm">No results found.</p>
+      </div>
     );
   }
 
-  /* ---------- NO DATA ---------- */
-  if (!results) {
-    return <div className="p-6">No results found.</div>;
-  }
-
-  /* ---------- SAFE DATA MAPPING ---------- */
   const options = results.options || [];
-
   const turnoutData = options.map((opt) => ({
     label: opt.text,
     value: opt.voteCount || 0,
   }));
-
   const totalVotes =
     results.totalVotes ||
     options.reduce((sum, opt) => sum + (opt.voteCount || 0), 0);
 
   return (
-    <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+    <div className="page-enter max-w-5xl mx-auto px-4 sm:px-6 py-6">
       {/* Back Button */}
       <button
         onClick={() => navigate("/polls")}
-        className="flex items-center gap-2 text-[#4F46E5] hover:text-[#4338CA] mb-4 text-sm font-medium"
+        className="btn-ghost text-sm mb-5"
+        style={{ color: "var(--brand-600)" }}
       >
         <ArrowLeft size={16} />
         Back to Polls
       </button>
 
-      <ResultsHeader title={results.question || "Poll Results"} />
+      {/* Header + Share */}
+      <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-4 mb-5">
+        <ResultsHeader title={results.question || "Poll Results"} />
+        <button
+          onClick={copyResultsLink}
+          className={`btn-secondary text-xs flex-shrink-0 ${
+            copiedLink ? "!border-green-500 !text-green-700 !bg-green-50" : ""
+          }`}
+        >
+          {copiedLink ? <Check size={14} /> : <Link2 size={14} />}
+          {copiedLink ? "Copied!" : "Share Results"}
+        </button>
+      </div>
 
       {/* Expiration Notice */}
       {results.expiresAt && (
         <div
-          className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-medium mb-5 animate-fade-in ${
             results.status === "Expired"
               ? "bg-gray-100 text-gray-600"
-              : "bg-amber-50 text-amber-700"
+              : "bg-amber-50 text-amber-700 border border-amber-100"
           }`}
         >
-          <Clock size={16} />
+          <Clock size={14} />
           {results.status === "Expired"
             ? `Poll expired on ${formatDate(results.expiresAt)}`
             : `Poll expires on ${formatDate(results.expiresAt)}`}
         </div>
       )}
 
-      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
+      {/* Metrics */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-5">
         <MetricsCard title="Total Votes" value={totalVotes} />
         <MetricsCard title="Options" value={options.length} />
         <MetricsCard title="Status" value={results.status || "Closed"} />
       </div>
 
       {options.length === 0 ? (
-        <div className="text-center text-gray-500 py-10 text-sm sm:text-base">
-          No votes have been cast yet 📭
+        <div className="card-flat p-12 text-center">
+          <p className="text-gray-400 text-sm">
+            No votes have been cast yet 📭
+          </p>
+          <p className="text-gray-300 text-xs mt-1">
+            Share the voting link to start collecting responses.
+          </p>
         </div>
       ) : (
         <>
           {/* Chart Type Selector */}
-          <div className="bg-white rounded-lg shadow-sm p-4">
-            <div className="flex items-center justify-between flex-wrap gap-4">
-              <div className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <PieChart size={16} />
-                <span>Chart Type</span>
-              </div>
-              <div className="flex gap-2">
-                {[
-                  { value: "pie", label: "Pie Chart" },
-                  { value: "donut", label: "Donut Chart" },
-                  { value: "bar", label: "Bar Chart" },
-                ].map((type) => (
+          <div className="card-flat p-3 mb-5 animate-fade-in-up delay-1">
+            <div className="flex items-center justify-between flex-wrap gap-3">
+              <span className="text-xs font-medium text-gray-500 px-1">
+                Chart Type
+              </span>
+              <div className="flex gap-1.5 bg-gray-100 p-1 rounded-lg">
+                {CHART_TYPES.map((type) => (
                   <button
                     key={type.value}
                     onClick={() => setChartType(type.value)}
-                    className={`px-3 py-2 text-sm font-medium rounded-md border transition-colors ${
+                    className={`flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-md transition-all duration-200 ${
                       chartType === type.value
-                        ? "bg-[#6366F1] text-white border-[#6366F1]"
-                        : "bg-white text-gray-700 border-gray-300 hover:bg-gray-50"
+                        ? "bg-white text-gray-900 shadow-sm"
+                        : "text-gray-500 hover:text-gray-700"
                     }`}
                   >
+                    <type.icon size={12} />
                     {type.label}
                   </button>
                 ))}
@@ -144,7 +191,8 @@ export default function ResultsPage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+          {/* Charts Grid */}
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             <VoteDistribution data={options} />
             <TurnoutChart data={turnoutData} chartType={chartType} />
           </div>

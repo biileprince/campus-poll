@@ -1,5 +1,5 @@
 import express from 'express';
-import { getAllPolls, getMyPolls, createPoll, getPollByVoteId, castVote, getPollResults, updatePoll, deletePoll } from '../controllers/pollController.js';
+import { getAllPolls, getMyPolls, createPoll, getPollByVoteId, castVote, submitResponse, getPollResults, updatePoll, deletePoll } from '../controllers/pollController.js';
 import { createPollLimiter, voteLimiter, resultsLimiter } from '../middlewares/rateLimiter.js';
 import { protect, optionalAuth } from '../middlewares/authMiddleware.js';
 import {
@@ -14,102 +14,64 @@ import {
 
 const router = express.Router();
 
-/**
- * @swagger
- * components:
- *   schemas:
- *     Poll:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *           description: Poll ID
- *         question:
- *           type: string
- *           description: Poll question
- *         voteId:
- *           type: string
- *           description: Unique voting ID
- *         resultsId:
- *           type: string
- *           description: Unique results ID
- *         createdAt:
- *           type: string
- *           format: date-time
- *         expiresAt:
- *           type: string
- *           format: date-time
- *           nullable: true
- *         allowMultiple:
- *           type: boolean
- *         isExpired:
- *           type: boolean
- *         totalVotes:
- *           type: integer
- *         options:
- *           type: array
- *           items:
- *             $ref: '#/components/schemas/Option'
- *         creator:
- *           type: object
- *           properties:
- *             name:
- *               type: string
- *           nullable: true
- *     Option:
- *       type: object
- *       properties:
- *         id:
- *           type: string
- *         text:
- *           type: string
- *         voteCount:
- *           type: integer
- *     CreatePollRequest:
- *       type: object
- *       required:
- *         - question
- *         - options
- *       properties:
- *         question:
- *           type: string
- *           minLength: 5
- *           example: "What's your favorite programming language?"
- *         options:
- *           type: array
- *           minItems: 2
- *           maxItems: 10
- *           items:
- *             type: string
- *           example: ["JavaScript", "Python", "Java", "TypeScript"]
- *         expiresAt:
- *           type: string
- *           format: date-time
- *           nullable: true
- *           example: "2024-12-31T23:59:59Z"
- *         allowMultiple:
- *           type: boolean
- *           default: false
- *           example: false
- */
+// ========================
+//  POLLS CRUD
+// ========================
 
 /**
  * @swagger
  * /polls:
  *   get:
- *     summary: Get all polls
+ *     summary: Browse all polls
+ *     description: Returns a paginated, searchable, filterable list of polls. Supports status filtering and sorting.
  *     tags: [Polls]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema: { type: integer, default: 1 }
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema: { type: integer, default: 12, maximum: 50 }
+ *         description: Results per page
+ *       - in: query
+ *         name: search
+ *         schema: { type: string }
+ *         description: Case-insensitive search by poll question
+ *       - in: query
+ *         name: status
+ *         schema: { type: string, enum: [all, active, expired] }
+ *         description: Filter by poll status
+ *       - in: query
+ *         name: sort
+ *         schema: { type: string, enum: [newest, oldest, most_votes, least_votes] }
+ *         description: Sort order
  *     responses:
  *       200:
- *         description: List of polls retrieved successfully
+ *         description: Paginated list of polls
  *         content:
  *           application/json:
  *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Poll'
+ *               $ref: '#/components/schemas/PaginatedPolls'
+ *       500:
+ *         description: Server error
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/Error'
+ */
+router.get('/polls', getAllPolls);
+
+/**
+ * @swagger
+ * /polls:
  *   post:
  *     summary: Create a new poll
+ *     description: |
+ *       Create a poll with either a simple options list (legacy) or multiple questions with different types.
+ *
+ *       **Legacy format:** Send `question` + `options[]`
+ *       **Multi-question format:** Send `question` + `questions[{ text, type, options[] }]`
  *     tags: [Polls]
  *     security:
  *       - bearerAuth: []
@@ -119,6 +81,25 @@ const router = express.Router();
  *         application/json:
  *           schema:
  *             $ref: '#/components/schemas/CreatePollRequest'
+ *           examples:
+ *             single_question:
+ *               summary: Simple single-question poll
+ *               value:
+ *                 question: "What's your favorite subject?"
+ *                 options: ["Math", "Science", "English"]
+ *             multi_question:
+ *               summary: Multi-question poll with mixed types
+ *               value:
+ *                 question: "Campus Feedback Survey"
+ *                 questions:
+ *                   - text: "Rate the cafeteria food"
+ *                     type: "single"
+ *                     options: ["Great", "Good", "Average", "Poor"]
+ *                   - text: "Which facilities do you use?"
+ *                     type: "multiple"
+ *                     options: ["Library", "Gym", "Lab", "Cafeteria"]
+ *                   - text: "Any suggestions for improvement?"
+ *                     type: "open_ended"
  *     responses:
  *       201:
  *         description: Poll created successfully
@@ -127,12 +108,11 @@ const router = express.Router();
  *             schema:
  *               type: object
  *               properties:
- *                 voteId:
- *                   type: string
- *                 resultsId:
- *                   type: string
- *                 message:
- *                   type: string
+ *                 id: { type: string }
+ *                 voteId: { type: string }
+ *                 resultsId: { type: string }
+ *                 votingUrl: { type: string, example: "/poll/abc123" }
+ *                 resultsUrl: { type: string, example: "/results/xyz789" }
  *       400:
  *         description: Validation error
  *         content:
@@ -141,173 +121,221 @@ const router = express.Router();
  *               $ref: '#/components/schemas/Error'
  *       429:
  *         description: Rate limit exceeded
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
  */
-// GET /api/polls - Get all polls (list)
-router.get('/polls', getAllPolls);
+router.post('/polls', createPollLimiter, optionalAuth, validateCreatePoll, createPoll);
 
 /**
  * @swagger
  * /my-polls:
  *   get:
- *     summary: Get polls created by authenticated user
+ *     summary: Get your polls
+ *     description: Returns all polls created by the authenticated user. Requires a valid JWT token.
  *     tags: [Polls]
  *     security:
  *       - bearerAuth: []
  *     responses:
  *       200:
- *         description: User's polls retrieved successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: array
- *               items:
- *                 $ref: '#/components/schemas/Poll'
+ *         description: List of user's polls with stats
  *       401:
- *         description: Unauthorized
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Not authenticated
  */
-// GET /api/my-polls - Get polls created by authenticated user
 router.get('/my-polls', protect, getMyPolls);
 
-// POST /api/polls - Create a new poll (optionally authenticated)
-router.post('/polls', createPollLimiter, optionalAuth, validateCreatePoll, createPoll);
-
-// PUT /api/polls/:resultsId - Update a poll (only if no votes cast, owner only)
-router.put('/polls/:resultsId', createPollLimiter, optionalAuth, validateUpdatePoll, updatePoll);
-
-// DELETE /api/polls/:resultsId - Delete a poll (owner only)
-router.delete('/polls/:resultsId', createPollLimiter, optionalAuth, validateDeletePoll, deletePoll);
-
 /**
  * @swagger
- * /poll/{voteId}:
- *   get:
- *     summary: Get poll for voting
+ * /polls/{resultsId}:
+ *   put:
+ *     summary: Update a poll
+ *     description: Update the question, options, or expiry date. Only the poll creator can do this. If votes have been cast, only the expiry can be changed.
  *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
- *         name: voteId
+ *         name: resultsId
  *         required: true
- *         schema:
- *           type: string
- *         description: The poll's voting ID
- *     responses:
- *       200:
- *         description: Poll retrieved for voting
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Poll'
- *       404:
- *         description: Poll not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- */
-// GET /api/poll/:voteId - Get poll for voting
-router.get('/poll/:voteId', validateGetPoll, getPollByVoteId);
-
-/**
- * @swagger
- * /vote/{optionId}:
- *   post:
- *     summary: Cast a vote for an option
- *     tags: [Polls]
- *     parameters:
- *       - in: path
- *         name: optionId
- *         required: true
- *         schema:
- *           type: string
- *         description: The option ID to vote for
+ *         schema: { type: string }
  *     requestBody:
  *       required: true
  *       content:
  *         application/json:
  *           schema:
  *             type: object
- *             required:
- *               - voteId
  *             properties:
- *               voteId:
- *                 type: string
- *                 description: The poll's voting ID
+ *               question: { type: string }
+ *               options: { type: array, items: { type: string } }
+ *               expiresAt: { type: string, format: date-time, nullable: true }
  *     responses:
  *       200:
- *         description: Vote cast successfully
- *         content:
- *           application/json:
- *             schema:
- *               type: object
- *               properties:
- *                 message:
- *                   type: string
- *                   example: "Vote recorded successfully"
+ *         description: Poll updated
  *       400:
- *         description: Invalid vote or poll expired
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Validation error
+ *       403:
+ *         description: Not the poll owner
  *       404:
- *         description: Poll or option not found
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
- *       429:
- *         description: Rate limit exceeded  
- *         content:
- *           application/json:
- *             schema:
- *               $ref: '#/components/schemas/Error'
+ *         description: Poll not found
  */
-// POST /api/vote/:optionId - Cast a vote for an option 
-router.post('/vote/:optionId', voteLimiter, validateCastVote, castVote);
+router.put('/polls/:resultsId', createPollLimiter, optionalAuth, validateUpdatePoll, updatePoll);
 
 /**
  * @swagger
- * /results/{resultsId}:
- *   get:
- *     summary: Get poll results
+ * /polls/{resultsId}:
+ *   delete:
+ *     summary: Delete a poll
+ *     description: Permanently delete a poll and all its votes, questions, and responses. Only the poll creator can do this.
  *     tags: [Polls]
+ *     security:
+ *       - bearerAuth: []
  *     parameters:
  *       - in: path
  *         name: resultsId
  *         required: true
- *         schema:
- *           type: string
- *         description: The poll's results ID
+ *         schema: { type: string }
  *     responses:
  *       200:
- *         description: Poll results retrieved successfully
+ *         description: Poll deleted
+ *       403:
+ *         description: Not the poll owner
+ *       404:
+ *         description: Poll not found
+ */
+router.delete('/polls/:resultsId', createPollLimiter, optionalAuth, validateDeletePoll, deletePoll);
+
+// ========================
+//  VOTING
+// ========================
+
+/**
+ * @swagger
+ * /poll/{voteId}:
+ *   get:
+ *     summary: Get a poll for voting
+ *     description: Fetch a poll by its unique vote ID. Returns the question, options (with vote counts hidden), and multi-question data if applicable.
+ *     tags: [Polls]
+ *     parameters:
+ *       - in: path
+ *         name: voteId
+ *         required: true
+ *         schema: { type: string }
+ *         description: The poll's unique voting ID
+ *     responses:
+ *       200:
+ *         description: Poll data for voting
  *         content:
  *           application/json:
  *             schema:
  *               $ref: '#/components/schemas/Poll'
  *       404:
  *         description: Poll not found
+ */
+router.get('/poll/:voteId', validateGetPoll, getPollByVoteId);
+
+/**
+ * @swagger
+ * /vote/{optionId}:
+ *   post:
+ *     summary: Cast a vote
+ *     description: Vote for a specific option in a poll. The option's vote count is incremented by 1.
+ *     tags: [Polls]
+ *     parameters:
+ *       - in: path
+ *         name: optionId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [voteId]
+ *             properties:
+ *               voteId:
+ *                 type: string
+ *                 description: The poll's voting ID (to verify the option belongs to this poll)
+ *     responses:
+ *       200:
+ *         description: Vote recorded
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "Vote recorded successfully" }
+ *                 voteCount: { type: integer }
+ *       400:
+ *         description: Invalid option or poll expired
+ *       404:
+ *         description: Poll not found
  *       429:
  *         description: Rate limit exceeded
+ */
+router.post('/vote/:optionId', voteLimiter, validateCastVote, castVote);
+
+/**
+ * @swagger
+ * /respond/{questionId}:
+ *   post:
+ *     summary: Submit an open-ended response
+ *     description: Submit a text response for an open-ended question. Only works for questions with type "open_ended". Maximum 1000 characters.
+ *     tags: [Responses]
+ *     parameters:
+ *       - in: path
+ *         name: questionId
+ *         required: true
+ *         schema: { type: string }
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [text]
+ *             properties:
+ *               text:
+ *                 type: string
+ *                 maxLength: 1000
+ *                 example: "I think we need better WiFi coverage in the library."
+ *     responses:
+ *       201:
+ *         description: Response submitted
+ *       400:
+ *         description: Invalid question type or poll closed
+ *       404:
+ *         description: Question not found
+ */
+router.post('/respond/:questionId', voteLimiter, submitResponse);
+
+// ========================
+//  RESULTS
+// ========================
+
+/**
+ * @swagger
+ * /results/{resultsId}:
+ *   get:
+ *     summary: View poll results
+ *     description: Get the full results for a poll including all option vote counts, questions, and text responses for open-ended questions.
+ *     tags: [Polls]
+ *     parameters:
+ *       - in: path
+ *         name: resultsId
+ *         required: true
+ *         schema: { type: string }
+ *         description: The poll's unique results ID
+ *     responses:
+ *       200:
+ *         description: Poll results with vote counts
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/Poll'
+ *       404:
+ *         description: Poll not found
+ *       429:
+ *         description: Rate limit exceeded
  */
-
-// GET /api/results/:resultsId - Get poll results
 router.get('/results/:resultsId', resultsLimiter, validateGetResults, getPollResults);
 
 export default router;

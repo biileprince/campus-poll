@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { X, Plus, Check, Loader2, Calendar, ArrowLeft } from "lucide-react";
+import { X, Plus, Check, Loader2, Calendar, ArrowLeft, GripVertical } from "lucide-react";
 import api from "../services/api";
 import { useAuth } from "../context/AuthContext";
 
@@ -29,12 +29,9 @@ function EditPollPage() {
         setPollQuestion(poll.question || "");
         setOptions(poll.options?.map((opt) => opt.text) || ["", ""]);
         setExpiresAt(
-          poll.expiresAt
-            ? new Date(poll.expiresAt).toISOString().slice(0, 16)
-            : "",
+          poll.expiresAt ? new Date(poll.expiresAt).toISOString().slice(0, 16) : ""
         );
 
-        // Check if poll has votes - can't edit content if votes exist
         const totalVotes = poll.totalVotes || 0;
         setCanEditContent(totalVotes === 0);
       } catch (err) {
@@ -44,70 +41,40 @@ function EditPollPage() {
       }
     };
 
-    if (resultsId) {
-      fetchPoll();
-    }
+    if (resultsId) fetchPoll();
   }, [resultsId]);
 
   const addOption = () => {
     if (options.length >= MAX_OPTIONS) {
-      setError(`Maximum ${MAX_OPTIONS} options allowed`);
-      setTimeout(() => setError(""), 6000);
+      setError(`You can add up to ${MAX_OPTIONS} choices`);
+      setTimeout(() => setError(""), 4000);
       return;
     }
     setOptions([...options, ""]);
   };
 
-  const removeOption = (index) => {
-    setOptions(options.filter((_, i) => i !== index));
-  };
-
-  const updateOption = (index, value) => {
-    const newOptions = [...options];
-    newOptions[index] = value;
-    setOptions(newOptions);
-  };
+  const removeOption = (index) => setOptions(options.filter((_, i) => i !== index));
+  const updateOption = (index, value) => { const n = [...options]; n[index] = value; setOptions(n); };
 
   const handleSubmit = async () => {
     setError("");
     setSuccess(false);
-
-    if (!pollQuestion.trim()) {
-      setError("Please enter a poll question");
-      return;
-    }
-
-    if (pollQuestion.trim().length < 5) {
-      setError("Question must be at least 5 characters long");
-      return;
-    }
-
-    const validOptions = options.filter((opt) => opt.trim().length > 0);
-    if (validOptions.length < 2) {
-      setError("Please provide at least 2 non-empty options");
-      return;
-    }
-
-    const uniqueOptions = new Set(
-      validOptions.map((opt) => opt.trim().toLowerCase()),
-    );
-    if (uniqueOptions.size !== validOptions.length) {
-      setError("Options must be unique (duplicates not allowed)");
-      return;
-    }
+    if (!pollQuestion.trim()) { setError("Please type a question"); return; }
+    if (pollQuestion.trim().length < 5) { setError("Your question is too short — use at least 5 characters"); return; }
+    const valid = options.filter((o) => o.trim().length > 0);
+    if (valid.length < 2) { setError("Add at least 2 choices"); return; }
+    const unique = new Set(valid.map((o) => o.trim().toLowerCase()));
+    if (unique.size !== valid.length) { setError("Each choice must be different"); return; }
 
     try {
       setLoading(true);
       await api.put(`/polls/${resultsId}`, {
         question: pollQuestion.trim(),
-        options: validOptions.map((opt) => opt.trim()),
+        options: valid.map((o) => o.trim()),
         expiresAt: expiresAt || null,
       });
-
       setSuccess(true);
-      setTimeout(() => {
-        navigate("/my-polls");
-      }, 1500);
+      setTimeout(() => navigate("/my-polls"), 1500);
     } catch (err) {
       setError(err.response?.data?.error || "Failed to update poll");
     } finally {
@@ -117,20 +84,11 @@ function EditPollPage() {
 
   if (!isAuthenticated) {
     return (
-      <div className="min-h-screen bg-[#F3F4F6] flex items-center justify-center">
-        <div className="bg-white rounded-lg shadow-sm p-8 max-w-md text-center">
-          <h2 className="text-xl font-semibold text-gray-900 mb-2">
-            Authentication Required
-          </h2>
-          <p className="text-gray-600 mb-4">
-            Please sign in to edit your polls.
-          </p>
-          <button
-            onClick={() => navigate("/login")}
-            className="bg-[#6366F1] text-white px-6 py-2 rounded-md font-medium hover:bg-[#5558E3]"
-          >
-            Sign In
-          </button>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="card-flat p-8 max-w-md text-center animate-scale-in">
+          <h2 className="text-lg font-bold text-gray-900 mb-2">Sign in required</h2>
+          <p className="text-sm text-gray-500 mb-5">You need to sign in to edit your polls.</p>
+          <button onClick={() => navigate("/login")} className="btn-primary">Sign In</button>
         </div>
       </div>
     );
@@ -138,156 +96,116 @@ function EditPollPage() {
 
   if (fetchLoading) {
     return (
-      <div className="min-h-screen bg-[#F3F4F6] flex items-center justify-center">
-        <div className="flex items-center gap-3">
-          <Loader2 className="w-6 h-6 animate-spin text-[#6366F1]" />
-          <span className="text-gray-600">Loading poll...</span>
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <div className="text-center animate-fade-in">
+          <Loader2 size={32} className="animate-spin mx-auto mb-3 text-brand-500" />
+          <p className="text-sm text-gray-500">Loading poll...</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F3F4F6]">
-      <main className="max-w-3xl mx-auto p-4 sm:p-6">
-        {/* Back Button */}
-        <button
-          onClick={() => navigate("/my-polls")}
-          className="flex items-center gap-2 text-gray-600 hover:text-gray-900 mb-6"
-        >
-          <ArrowLeft size={20} />
-          <span>Back to My Polls</span>
+    <div className="page-enter">
+      <main className="max-w-3xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
+        <button onClick={() => navigate("/my-polls")} className="btn-ghost text-sm mb-5 text-brand-600">
+          <ArrowLeft size={16} /> Back to My Polls
         </button>
 
-        <div className="bg-white rounded-lg shadow-sm p-6">
-          <h1 className="text-xl sm:text-2xl font-bold text-[#111827] mb-6">
-            Edit Poll
-          </h1>
+        <div className="mb-6">
+          <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-1">Edit Poll</h1>
+          <p className="text-gray-500 text-sm">Update your question, choices, or close date.</p>
+        </div>
 
-          {!canEditContent && (
-            <div className="bg-amber-50 border border-amber-200 text-amber-800 px-4 py-3 rounded-md mb-6">
-              <p className="text-sm font-medium">
-                This poll has received votes. You can only edit the expiration
-                date.
-              </p>
+        {!canEditContent && (
+          <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium" style={{ backgroundColor: "var(--warning-50)", color: "var(--warning-600)", border: "1px solid var(--warning-50)" }}>
+            This poll already has votes. You can only change the close date.
+          </div>
+        )}
+
+        {error && (
+          <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium animate-scale-in" style={{ backgroundColor: "var(--error-50)", color: "var(--error-700)", border: "1px solid var(--error-100)" }}>
+            {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-5 px-4 py-3 rounded-xl text-sm font-medium animate-scale-in" style={{ backgroundColor: "var(--success-50)", color: "var(--success-700)" }}>
+            Poll updated! Taking you back...
+          </div>
+        )}
+
+        <div className="space-y-4">
+          {/* Question */}
+          <div className="card-flat p-5">
+            <label className="block text-sm font-semibold text-gray-800 mb-2">Your Question</label>
+            <input
+              type="text"
+              value={pollQuestion}
+              onChange={(e) => setPollQuestion(e.target.value)}
+              disabled={!canEditContent}
+              placeholder="What do you want to ask?"
+              className="input disabled:bg-gray-50 disabled:cursor-not-allowed"
+              maxLength={200}
+            />
+          </div>
+
+          {/* Options */}
+          <div className="card-flat p-5">
+            <label className="text-sm font-semibold text-gray-800 mb-4 block">Answer Choices</label>
+            <div className="space-y-2.5 mb-4">
+              {options.map((option, index) => (
+                <div key={index} className="flex items-center gap-2 group">
+                  <GripVertical size={14} className="text-gray-300" />
+                  <div className="w-2 h-2 rounded-full flex-shrink-0" style={{ backgroundColor: option.trim() ? `hsl(${(index * 60) % 360}, 55%, 50%)` : "var(--gray-300)" }} />
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => updateOption(index, e.target.value)}
+                    disabled={!canEditContent}
+                    placeholder={`Choice ${index + 1}`}
+                    className="input flex-1 disabled:bg-gray-50 disabled:cursor-not-allowed"
+                    maxLength={100}
+                  />
+                  {options.length > 2 && canEditContent && (
+                    <button onClick={() => removeOption(index)} className="p-1.5 rounded-lg text-gray-300 hover:text-red-500 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-all">
+                      <X size={16} />
+                    </button>
+                  )}
+                </div>
+              ))}
             </div>
-          )}
-
-          {error && (
-            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-md mb-6">
-              {error}
-            </div>
-          )}
-
-          {success && (
-            <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-md mb-6">
-              Poll updated successfully! Redirecting...
-            </div>
-          )}
-
-          <div className="space-y-6">
-            {/* Question */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Poll Question
-              </label>
-              <input
-                type="text"
-                value={pollQuestion}
-                onChange={(e) => setPollQuestion(e.target.value)}
-                disabled={!canEditContent}
-                placeholder="What would you like to ask?"
-                className="w-full px-4 py-3 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366F1] disabled:bg-gray-100 disabled:cursor-not-allowed"
-              />
-            </div>
-
-            {/* Options */}
-            <div className="space-y-2">
-              <label className="block text-sm font-medium text-gray-700">
-                Answer Options
-              </label>
-              <div className="space-y-3">
-                {options.map((option, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <span className="w-6 h-6 flex items-center justify-center bg-[#EEF2FF] text-[#6366F1] rounded-full text-sm font-medium">
-                      {index + 1}
-                    </span>
-                    <input
-                      type="text"
-                      value={option}
-                      onChange={(e) => updateOption(index, e.target.value)}
-                      disabled={!canEditContent}
-                      placeholder={`Option ${index + 1}`}
-                      className="flex-1 px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366F1] disabled:bg-gray-100 disabled:cursor-not-allowed"
-                    />
-                    {options.length > 2 && canEditContent && (
-                      <button
-                        onClick={() => removeOption(index)}
-                        className="p-2 text-red-500 hover:bg-red-50 rounded-md"
-                      >
-                        <X size={18} />
-                      </button>
-                    )}
-                  </div>
-                ))}
-              </div>
-
-              {canEditContent && options.length < MAX_OPTIONS && (
-                <button
-                  onClick={addOption}
-                  className="flex items-center gap-2 text-[#6366F1] text-sm font-medium hover:underline mt-2"
-                >
-                  <Plus size={16} />
-                  Add Option
-                </button>
-              )}
-            </div>
-
-            {/* Expiration Date */}
-            <div className="space-y-2">
-              <label className="flex items-center gap-2 text-sm font-medium text-gray-700">
-                <Calendar size={16} />
-                Expiration Date (Optional)
-              </label>
-              <input
-                type="datetime-local"
-                value={expiresAt}
-                onChange={(e) => setExpiresAt(e.target.value)}
-                min={new Date().toISOString().slice(0, 16)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-[#6366F1]"
-              />
-              <p className="text-xs text-gray-500">
-                Leave empty for no expiration
-              </p>
-            </div>
-
-            {/* Action Buttons */}
-            <div className="flex gap-3 pt-4">
-              <button
-                onClick={handleSubmit}
-                disabled={loading || success}
-                className="flex-1 bg-[#6366F1] text-white py-3 rounded-md font-medium hover:bg-[#5558E3] transition-colors flex items-center justify-center gap-2 disabled:bg-gray-400 disabled:cursor-not-allowed"
-              >
-                {loading ? (
-                  <>
-                    <Loader2 size={18} className="animate-spin" />
-                    Updating...
-                  </>
-                ) : (
-                  <>
-                    <Check size={18} />
-                    Update Poll
-                  </>
-                )}
+            {canEditContent && options.length < MAX_OPTIONS && (
+              <button onClick={addOption} className="flex items-center gap-2 text-sm font-medium text-brand-600 hover:text-brand-700">
+                <Plus size={16} /> Add a choice
               </button>
-              <button
-                onClick={() => navigate("/my-polls")}
-                disabled={loading || success}
-                className="px-6 py-3 border border-gray-300 text-gray-700 rounded-md font-medium hover:bg-gray-50 transition-colors disabled:bg-gray-100 disabled:cursor-not-allowed"
-              >
-                Cancel
-              </button>
-            </div>
+            )}
+          </div>
+
+          {/* Close Date */}
+          <div className="card-flat p-5">
+            <label className="flex items-center gap-2 text-sm font-semibold text-gray-800 mb-2">
+              <Calendar size={14} className="text-gray-400" /> Close Date
+              <span className="badge badge-neutral text-[10px]">Optional</span>
+            </label>
+            <input
+              type="datetime-local"
+              value={expiresAt}
+              onChange={(e) => setExpiresAt(e.target.value)}
+              min={new Date().toISOString().slice(0, 16)}
+              className="input"
+            />
+            <p className="text-xs text-gray-400 mt-1">Leave empty if you don't want the poll to close automatically.</p>
+          </div>
+
+          {/* Actions */}
+          <div className="flex gap-3">
+            <button onClick={handleSubmit} disabled={loading || success} className="btn-primary flex-1 py-3">
+              {loading ? (<><Loader2 size={18} className="animate-spin" /> Updating...</>) : (<><Check size={18} /> Update Poll</>)}
+            </button>
+            <button onClick={() => navigate("/my-polls")} disabled={loading || success} className="btn-secondary px-6 py-3">
+              Cancel
+            </button>
           </div>
         </div>
       </main>

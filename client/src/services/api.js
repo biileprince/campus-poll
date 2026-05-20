@@ -46,12 +46,13 @@ api.interceptors.response.use(
 );
 
 /**
- * Get all polls
- * @returns {Promise<Object>} List of polls
+ * Get all polls with optional pagination and search
+ * @param {Object} params - { page, limit, search }
+ * @returns {Promise<Object>} { polls, total, pagination }
  */
-export const getAllPolls = async () => {
+export const getAllPolls = async (params = {}) => {
   try {
-    const response = await api.get('/polls');
+    const response = await api.get('/polls', { params });
     return response.data;
   } catch (error) {
     throw error;

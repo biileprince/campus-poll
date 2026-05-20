@@ -12,21 +12,33 @@ import {
 } from "recharts";
 
 const COLORS = [
-  "#6366F1",
-  "#22C55E",
-  "#F59E0B",
-  "#EF4444",
-  "#8B5CF6",
-  "#EC4899",
-  "#14B8A6",
-  "#F97316",
+  "#4f6ef5",
+  "#10b981",
+  "#f59e0b",
+  "#8b5cf6",
+  "#ec4899",
+  "#14b8a6",
+  "#f97316",
+  "#06b6d4",
 ];
+
+const CustomTooltip = ({ active, payload }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="card-flat px-3 py-2 shadow-lg text-xs">
+        <p className="font-semibold text-gray-900">{payload[0].name || payload[0].payload?.label}</p>
+        <p className="text-gray-500">{payload[0].value} votes</p>
+      </div>
+    );
+  }
+  return null;
+};
 
 export default function TurnoutChart({ data, chartType = "pie" }) {
   if (!data || data.length === 0) {
     return (
-      <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow">
-        <p className="text-sm text-gray-500">No chart data available</p>
+      <div className="card-flat p-5">
+        <p className="text-sm text-gray-400 text-center py-8">No chart data available</p>
       </div>
     );
   }
@@ -35,26 +47,27 @@ export default function TurnoutChart({ data, chartType = "pie" }) {
     switch (chartType) {
       case "bar":
         return (
-          <ResponsiveContainer width="100%" height="85%">
+          <ResponsiveContainer width="100%" height="100%">
             <BarChart
               data={data}
               layout="vertical"
-              margin={{ left: 60, right: 20 }}
+              margin={{ left: 10, right: 20, top: 5, bottom: 5 }}
             >
               <CartesianGrid
                 strokeDasharray="3 3"
                 horizontal={true}
                 vertical={false}
+                stroke="#f1f3f5"
               />
-              <XAxis type="number" />
+              <XAxis type="number" tick={{ fontSize: 11, fill: "#9ca3af" }} />
               <YAxis
                 type="category"
                 dataKey="label"
                 width={80}
-                tick={{ fontSize: 12 }}
+                tick={{ fontSize: 11, fill: "#6b7280" }}
               />
-              <Tooltip />
-              <Bar dataKey="value" radius={[0, 4, 4, 0]}>
+              <Tooltip content={<CustomTooltip />} />
+              <Bar dataKey="value" radius={[0, 6, 6, 0]} barSize={24}>
                 {data.map((_, index) => (
                   <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
@@ -65,15 +78,15 @@ export default function TurnoutChart({ data, chartType = "pie" }) {
 
       case "donut":
         return (
-          <ResponsiveContainer width="100%" height="85%">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 dataKey="value"
                 nameKey="label"
-                innerRadius={50}
-                outerRadius={80}
-                paddingAngle={2}
+                innerRadius="45%"
+                outerRadius="75%"
+                paddingAngle={3}
                 label={({ label, percent }) =>
                   `${label} (${(percent * 100).toFixed(0)}%)`
                 }
@@ -83,7 +96,7 @@ export default function TurnoutChart({ data, chartType = "pie" }) {
                   <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [value, "Votes"]} />
+              <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -91,13 +104,13 @@ export default function TurnoutChart({ data, chartType = "pie" }) {
       case "pie":
       default:
         return (
-          <ResponsiveContainer width="100%" height="85%">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
               <Pie
                 data={data}
                 dataKey="value"
                 nameKey="label"
-                outerRadius={80}
+                outerRadius="75%"
                 label={({ label, percent }) =>
                   `${label} (${(percent * 100).toFixed(0)}%)`
                 }
@@ -107,7 +120,7 @@ export default function TurnoutChart({ data, chartType = "pie" }) {
                   <Cell key={index} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip formatter={(value) => [value, "Votes"]} />
+              <Tooltip content={<CustomTooltip />} />
             </PieChart>
           </ResponsiveContainer>
         );
@@ -115,11 +128,13 @@ export default function TurnoutChart({ data, chartType = "pie" }) {
   };
 
   return (
-    <div className="bg-white rounded-lg sm:rounded-xl p-3 sm:p-4 shadow h-[280px] sm:h-[320px]">
-      <h3 className="text-sm sm:text-base font-semibold mb-2">
-        Vote Distribution
+    <div className="card-flat p-5 animate-fade-in-up delay-3">
+      <h3 className="text-sm font-semibold text-gray-900 mb-3">
+        Chart View
       </h3>
-      {renderChart()}
+      <div className="h-[240px] sm:h-[280px]">
+        {renderChart()}
+      </div>
     </div>
   );
 }
