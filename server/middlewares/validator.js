@@ -26,15 +26,17 @@ export const validateCreatePoll = [
         .notEmpty()
         .withMessage('Question is required')
         .isLength({ min: 5, max: 500 })
-        .withMessage('Question must be between 5 and 500 characters')
-        .matches(/^[a-zA-Z0-9\s.,!?'-]+$/)
-        .withMessage('Question contains invalid characters'),
+        .withMessage('Question must be between 5 and 500 characters'),
 
+    // Options are optional here because multi-question polls use the 'questions' array.
+    // The pollController handles structural validation.
     body('options')
+        .optional()
         .isArray({ min: 2, max: 10 })
         .withMessage('Must provide between 2 and 10 options'),
 
     body('options.*')
+        .optional()
         .trim()
         .notEmpty()
         .withMessage('Option cannot be empty')

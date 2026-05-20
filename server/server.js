@@ -28,15 +28,20 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+// Enable trust proxy for rate limiting behind Render's reverse proxy
+app.set('trust proxy', 1);
+
 // Security middleware with CSP configuration
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'"],
-      scriptSrc: ["'self'", "'unsafe-inline'"],
-      styleSrc: ["'self'", "'unsafe-inline'"],
+      connectSrc: ["'self'", "https://accounts.google.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com"],
       imgSrc: ["'self'", "data:", "https:"],
+      frameSrc: ["'self'", "https://accounts.google.com"],
     },
   },
 }));
