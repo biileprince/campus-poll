@@ -10,7 +10,7 @@
         "build": "cd ../client && npm install && npm run build",
         "deploy": "npm run build && npm start",
         "db:generate": "prisma generate",
-        "db:push": "prisma db push",
+        "db:push": "prisma db push --accept-data-loss",
         "db:migrate": "prisma migrate dev",
         "db:reset": "prisma migrate reset",
         "db:studio": "prisma studio"
