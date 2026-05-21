@@ -11,12 +11,12 @@ export default function AppLayout() {
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
       <div
-        className="flex-1 flex flex-col"
+        className="flex-1 flex flex-col min-w-0"
         style={{ marginLeft: "0" }}
       >
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
         <main
-          className="flex-1 overflow-y-auto"
+          className="flex-1 overflow-y-auto overflow-x-hidden"
           style={{
             paddingTop: "var(--header-height)",
             backgroundColor: "var(--surface-bg)",
@@ -30,3 +30,4 @@ export default function AppLayout() {
     </div>
   );
 }
+

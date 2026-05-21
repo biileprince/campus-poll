@@ -37,7 +37,7 @@ export default function HomePage() {
       <div className="relative overflow-hidden" style={{ minHeight: "360px" }}>
         <img src="/hero-bg.png" alt="" className="absolute inset-0 w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gray-900/60" />
-        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-16 sm:py-20">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
           <div className="animate-fade-in-up">
             <h1 className="text-3xl sm:text-4xl lg:text-5xl text-white mb-4 tracking-tight leading-tight">
               Ask your campus<br />
@@ -58,7 +58,7 @@ export default function HomePage() {
           </div>
 
           {/* Stats */}
-          <div className="mt-12 grid grid-cols-3 gap-4 sm:gap-8 max-w-md">
+          <div className="mt-10 sm:mt-12 grid grid-cols-3 gap-3 sm:gap-8 max-w-md">
             {[
               { label: "Polls Created", value: stats.totalPolls },
               { label: "Total Votes", value: stats.totalVotes },
@@ -76,7 +76,7 @@ export default function HomePage() {
       {/* Main Content */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
         {/* Quick Actions */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-12">
+        <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-12">
           {[
             { icon: Plus, title: "Create Poll", desc: "Make a new poll with one or more questions", color: "var(--brand-500)", bg: "var(--brand-50)", action: () => navigate("/create-poll") },
             { icon: ListChecks, title: "Browse Polls", desc: "See what others are asking about", color: "var(--success-600)", bg: "var(--success-50)", action: () => navigate("/polls") },
@@ -160,7 +160,7 @@ export default function HomePage() {
               Campus Poll supports different question types and useful features.
             </p>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
             {[
               { icon: CheckSquare, title: "Single & Multiple Choice", desc: "Let people pick one answer or let them choose more than one." },
               { icon: MessageSquare, title: "Open-Ended Questions", desc: "Ask questions where people type their own answer in their own words." },

@@ -329,7 +329,7 @@ function CreatePollPage() {
                       {/* Question Type */}
                       <div>
                         <label className="block text-xs text-gray-600 mb-1.5" style={{ fontWeight: 550 }}>Answer type</label>
-                        <div className="grid grid-cols-3 gap-2">
+                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                           {QUESTION_TYPES.map((type) => {
                             const Icon = type.icon;
                             const isActive = q.type === type.value;

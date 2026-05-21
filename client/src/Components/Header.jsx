@@ -30,11 +30,11 @@ export default function Header({ onMenuClick }) {
   return (
     <header className="fixed top-0 right-0 left-0 lg:left-[var(--sidebar-width)] bg-white border-b border-gray-200 z-20" style={{ height: "var(--header-height)" }}>
       <div className="flex items-center px-4 lg:px-6 h-full justify-between">
-        <div className="flex items-center gap-3">
-          <button onClick={onMenuClick} className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100">
+        <div className="flex items-center gap-3 min-w-0">
+          <button onClick={onMenuClick} className="lg:hidden p-1.5 rounded-lg text-gray-500 hover:text-gray-700 hover:bg-gray-100 flex-shrink-0">
             <Menu size={20} />
           </button>
-          <h1 className="text-base font-semibold text-gray-900">{getPageTitle()}</h1>
+          <h1 className="text-base font-semibold text-gray-900 truncate">{getPageTitle()}</h1>
         </div>
         <div className="flex items-center gap-2">
           <button onClick={() => navigate("/create-poll")} className="hidden sm:flex btn-primary text-xs py-2 px-3">

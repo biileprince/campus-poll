@@ -1,6 +1,6 @@
 import express from 'express';
 import { body } from 'express-validator';
-import { register, login, googleAuth, getMe, getUserStats, updateProfile, changePassword } from '../controllers/authController.js';
+import { register, login, googleAuth, getMe, getUserStats, updateProfile, changePassword, promoteAdmin } from '../controllers/authController.js';
 import { protect } from '../middlewares/authMiddleware.js';
 import { handleValidationErrors } from '../middlewares/validator.js';
 import { authLimiter } from '../middlewares/rateLimiter.js';
@@ -374,5 +374,8 @@ router.put('/profile', protect, updateProfileValidation, handleValidationErrors,
  *               $ref: '#/components/schemas/Error'
  */
 router.put('/password', protect, changePasswordValidation, handleValidationErrors, changePassword);
+
+// Promote a user to admin (protected by ADMIN_SECRET env variable)
+router.post('/promote-admin', authLimiter, promoteAdmin);
 
 export default router;

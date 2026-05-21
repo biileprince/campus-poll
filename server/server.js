@@ -13,6 +13,7 @@ const __dirname = path.dirname(__filename);
 // Import routes
 import pollRoutes from './routes/pollRoutes.js';
 import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
@@ -36,7 +37,7 @@ app.use(helmet({
   contentSecurityPolicy: {
     directives: {
       defaultSrc: ["'self'"],
-      connectSrc: ["'self'", "https://accounts.google.com"],
+      connectSrc: ["'self'", "https://accounts.google.com", "https://*.googleapis.com"],
       scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com"],
       scriptSrcElem: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com"],
       styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
@@ -44,8 +45,11 @@ app.use(helmet({
       fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
       imgSrc: ["'self'", "data:", "https:"],
       frameSrc: ["'self'", "https://accounts.google.com"],
+      formAction: ["'self'", "https://accounts.google.com"],
+      workerSrc: ["'self'", "blob:"],
     },
   },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
 }));
 
 // Security headers
@@ -92,6 +96,7 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
 
 // API routes
 app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api', pollRoutes);
 
 // Serve React app for all other routes (React Router handling)

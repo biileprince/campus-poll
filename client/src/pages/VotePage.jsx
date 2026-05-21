@@ -236,9 +236,9 @@ function VotingPage() {
           <ArrowLeft size={16} /> Back to Polls
         </button>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_280px] gap-4 sm:gap-5">
           {/* Left */}
-          <div className="lg:col-span-2 space-y-4">
+          <div className="space-y-4">
             {/* Header card */}
             <div className="card-flat p-5 sm:p-7">
               {isExpired ? (

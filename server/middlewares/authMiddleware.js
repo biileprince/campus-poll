@@ -30,7 +30,8 @@ export const protect = async (req, res, next) => {
             select: {
                 id: true,
                 email: true,
-                name: true
+                name: true,
+                role: true
             }
         });
 
@@ -63,6 +64,17 @@ export const protect = async (req, res, next) => {
     }
 };
 
+// Require admin role
+export const requireAdmin = (req, res, next) => {
+    if (!req.user || req.user.role !== 'ADMIN') {
+        return res.status(403).json({
+            success: false,
+            message: 'Admin access required'
+        });
+    }
+    next();
+};
+
 // Optional auth - attach user if token present, but don't require it
 export const optionalAuth = async (req, res, next) => {
     try {
@@ -79,7 +91,8 @@ export const optionalAuth = async (req, res, next) => {
                 select: {
                     id: true,
                     email: true,
-                    name: true
+                    name: true,
+                    role: true
                 }
             });
             req.user = user || null;
@@ -94,3 +107,4 @@ export const optionalAuth = async (req, res, next) => {
         next();
     }
 };
+

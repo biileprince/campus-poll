@@ -220,10 +220,10 @@ export default function PollsPage() {
                   onClick={() => navigate(`/poll/${poll.voteId}`)}
                   className="text-sm font-semibold text-gray-900 mb-3 leading-snug line-clamp-2 group-hover:text-brand-600 transition-colors cursor-pointer"
                 >{poll.question}</h3>
-                <div className="flex items-center gap-3 text-xs text-gray-400 mb-4">
+                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mb-4">
                   <span className="flex items-center gap-1"><Users size={12} /> {poll.totalVotes} votes</span>
                   <span className="flex items-center gap-1"><Vote size={12} /> {poll.optionCount} choices</span>
-                  <span className="flex items-center gap-1 ml-auto"><Clock size={12} /> {formatDate(poll.createdAt)}</span>
+                  <span className="flex items-center gap-1 sm:ml-auto"><Clock size={12} /> {formatDate(poll.createdAt)}</span>
                 </div>
                 <div className="flex gap-2 mt-auto pt-3 border-t border-gray-100">
                   <button onClick={() => navigate(`/poll/${poll.voteId}`)} className="btn-primary flex-1 py-2 text-xs">

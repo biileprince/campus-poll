@@ -332,3 +332,92 @@ select.input {
   color: var(--gray-900);
   box-shadow: var(--shadow-xs);
 }
+
+/* === RESPONSIVE — GLOBAL FIXES === */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Prevent horizontal overflow on mobile */
+html, body {
+  overflow-x: hidden;
+  max-width: 100vw;
+}
+
+/* Inputs should never exceed their container */
+.input {
+  max-width: 100%;
+  min-width: 0;
+}
+
+/* Buttons: prevent text overflow, wrap gracefully */
+.btn-primary,
+.btn-secondary,
+.btn-ghost {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
+}
+
+/* Cards: prevent overflow on small screens */
+.card, .card-flat {
+  max-width: 100%;
+  overflow: hidden;
+  word-break: break-word;
+}
+
+/* === SMALL SCREEN OVERRIDES (<480px) === */
+@media (max-width: 480px) {
+  :root {
+    --sidebar-width: 260px;
+    --header-height: 52px;
+  }
+
+  h1 { font-size: 1.5rem; }
+  h2 { font-size: 1.25rem; }
+  h3 { font-size: 1.1rem; }
+
+  .card, .card-flat {
+    border-radius: var(--radius-lg);
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.5rem 1rem;
+    font-size: 0.8125rem;
+  }
+
+  .badge {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.6875rem;
+  }
+
+  .input {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .pill-tabs {
+    flex-wrap: wrap;
+  }
+
+  .pill-tab {
+    padding: 0.3rem 0.625rem;
+    font-size: 0.75rem;
+  }
+}
+
+/* === VERY SMALL SCREEN OVERRIDES (<360px) === */
+@media (max-width: 360px) {
+  h1 { font-size: 1.375rem; }
+  h2 { font-size: 1.125rem; }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.75rem;
+    gap: 0.375rem;
+  }
+}
+

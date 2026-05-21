@@ -210,7 +210,6 @@ function MyPollsPage() {
                 )}
               </div>
 
-              {/* Actions */}
               <div className="flex flex-wrap gap-1.5 pt-3 border-t border-gray-100">
                 <Link
                   to={`/results/${poll.resultsId}`}

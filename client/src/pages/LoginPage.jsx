@@ -31,12 +31,13 @@ export default function LoginPage() {
   // button + prompt fallback: that flow created a confusing two-click UX.
   useEffect(() => {
     const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
-    if (!clientId) return;
+    if (!clientId || clientId === 'your-google-client-id-here') return;
 
     const init = () => {
       if (!window.google?.accounts?.id || !googleBtnRef.current) return;
       window.google.accounts.id.initialize({
         client_id: clientId,
+        ux_mode: 'popup',
         use_fedcm_for_prompt: true,
         callback: async (response) => {
           try {
@@ -66,11 +67,13 @@ export default function LoginPage() {
     if (window.google?.accounts?.id) {
       init();
     } else {
-      // GSI script still loading — poll briefly then init
       const t = setInterval(() => {
         if (window.google?.accounts?.id) { clearInterval(t); init(); }
       }, 100);
-      const timeout = setTimeout(() => clearInterval(t), 5000);
+      const timeout = setTimeout(() => {
+        clearInterval(t);
+        if (!googleReady) setGoogleReady(true); // hide loader even if GSI failed
+      }, 5000);
       return () => { clearInterval(t); clearTimeout(timeout); };
     }
   }, []);
