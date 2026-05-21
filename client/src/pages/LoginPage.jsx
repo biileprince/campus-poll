@@ -51,7 +51,6 @@ export default function LoginPage() {
         },
       });
 
-      googleBtnRef.current.innerHTML = "";
       const width = Math.min(400, Math.max(240, googleBtnRef.current.clientWidth || 360));
       window.google.accounts.id.renderButton(googleBtnRef.current, {
         theme: "outline",
@@ -120,13 +119,15 @@ export default function LoginPage() {
             </div>
           )}
 
-          {/* Official Google button (rendered by GSI on mount) */}
-          <div ref={googleBtnRef} className="mb-4 flex justify-center min-h-[44px]">
+          {/* Official Google button — GSI mutates this div's DOM, so React
+              must not track any children inside it. The loader is a sibling. */}
+          <div className="mb-4 flex flex-col items-center justify-center min-h-[44px]">
             {!googleReady && (
               <div className="flex items-center gap-2 text-xs text-gray-400">
                 <Loader2 size={14} className="animate-spin" /> Loading Google sign-in...
               </div>
             )}
+            <div ref={googleBtnRef} />
           </div>
 
           <div className="divider mb-4">or</div>
