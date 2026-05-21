@@ -551,74 +551,125 @@ export const getPollResults = async (req, res) => {
 export const updatePoll = async (req, res) => {
     try {
         const { resultsId } = req.params;
-        const { question, options, expiresAt, chartType } = req.body;
+        const { question, options, questions, expiresAt, chartType } = req.body;
 
-        // Find the poll by resultsId
         const existingPoll = await prisma.poll.findUnique({
             where: { resultsId },
-            include: { options: true },
+            include: {
+                options: true,
+                questions: { include: { options: true, responses: true } },
+            },
         });
 
         if (!existingPoll) {
-            return res.status(404).json({
-                error: 'Poll not found',
-            });
+            return res.status(404).json({ error: 'Poll not found' });
         }
 
-        // Check ownership - only creator can edit their polls
+        // Ownership check
         if (existingPoll.creatorId && req.user?.id !== existingPoll.creatorId) {
+            return res.status(403).json({ error: 'You are not authorized to edit this poll' });
+        }
+
+        const isMultiQuestion = existingPoll.questions && existingPoll.questions.length > 0;
+
+        // Count total votes/responses across both formats
+        const legacyVotes = existingPoll.options.reduce((sum, opt) => sum + opt.voteCount, 0);
+        const multiVotes = existingPoll.questions.reduce((sum, q) => {
+            if (q.type === 'open_ended') return sum + q.responses.length;
+            return sum + q.options.reduce((s, o) => s + o.voteCount, 0);
+        }, 0);
+        const totalVotes = isMultiQuestion ? multiVotes : legacyVotes;
+
+        const contentChangeRequested = question !== undefined || options !== undefined || questions !== undefined;
+        if (totalVotes > 0 && contentChangeRequested) {
             return res.status(403).json({
-                error: 'You are not authorized to edit this poll',
+                error: 'Cannot edit question or choices after votes have been cast. You can still update the close date.',
             });
         }
 
-        // Check if poll has votes - only allow editing question/options if no votes cast
-        const totalVotes = existingPoll.options.reduce((sum, opt) => sum + opt.voteCount, 0);
-        if (totalVotes > 0 && (question || options)) {
-            return res.status(403).json({
-                error: 'Cannot edit question or options after votes have been cast. You can still update expiration date and chart type.',
-            });
-        }
-
-        // Validate new data if provided
-        const updatedQuestion = question ? question.trim() : existingPoll.question;
-
-        let updatedOptions = existingPoll.options;
-        if (options && Array.isArray(options)) {
-            const validOptions = options.filter(opt => opt && opt.trim().length > 0);
-
-            // Check for duplicates
-            const uniqueOptions = [...new Set(validOptions.map(opt => opt.trim().toLowerCase()))];
-            if (uniqueOptions.length !== validOptions.length) {
-                return res.status(400).json({
-                    error: 'Duplicate options are not allowed',
-                });
+        // === Multi-question update ===
+        if (isMultiQuestion && Array.isArray(questions)) {
+            // Validate each question
+            for (let i = 0; i < questions.length; i++) {
+                const q = questions[i];
+                if (!q.text || q.text.trim().length < 3) {
+                    return res.status(400).json({ error: `Question ${i + 1} is too short (at least 3 characters)` });
+                }
+                const type = q.type || 'single';
+                if (!['single', 'multiple', 'open_ended'].includes(type)) {
+                    return res.status(400).json({ error: `Question ${i + 1} has an invalid type` });
+                }
+                if (type !== 'open_ended') {
+                    const validOpts = (q.options || []).filter(o => o && o.trim().length > 0);
+                    if (validOpts.length < 2) {
+                        return res.status(400).json({ error: `Question ${i + 1} needs at least 2 choices` });
+                    }
+                    const lower = validOpts.map(o => o.trim().toLowerCase());
+                    if (new Set(lower).size !== lower.length) {
+                        return res.status(400).json({ error: `Question ${i + 1} has duplicate choices` });
+                    }
+                }
             }
 
-            // Delete old options and create new ones
-            await prisma.option.deleteMany({
-                where: { pollId: existingPoll.id },
+            // Replace questions: cascade-delete removes their options/responses
+            await prisma.question.deleteMany({ where: { pollId: existingPoll.id } });
+
+            await prisma.poll.update({
+                where: { id: existingPoll.id },
+                data: {
+                    question: question?.trim() || existingPoll.question,
+                    expiresAt: expiresAt !== undefined ? (expiresAt ? new Date(expiresAt) : null) : existingPoll.expiresAt,
+                    chartType: chartType || existingPoll.chartType,
+                    questions: {
+                        create: questions.map((q, idx) => ({
+                            text: q.text.trim(),
+                            type: q.type || 'single',
+                            order: idx,
+                            options: {
+                                create: (q.type === 'open_ended' ? [] : (q.options || []))
+                                    .filter(o => o && o.trim().length > 0)
+                                    .map(text => ({ text: text.trim() })),
+                            },
+                        })),
+                    },
+                },
             });
 
-            updatedOptions = validOptions.map(text => ({ text: text.trim() }));
+            return res.status(200).json({
+                id: existingPoll.id,
+                voteId: existingPoll.voteId,
+                resultsId: existingPoll.resultsId,
+                message: 'Poll updated successfully',
+            });
         }
 
-        // Update poll
+        // === Legacy single-question update ===
+        const updatedQuestion = question ? question.trim() : existingPoll.question;
+        let newOptionsData = null;
+
+        if (options && Array.isArray(options)) {
+            const validOptions = options.filter(opt => opt && opt.trim().length > 0);
+            if (validOptions.length < 2) {
+                return res.status(400).json({ error: 'At least 2 non-empty options are required' });
+            }
+            const uniqueOptions = [...new Set(validOptions.map(opt => opt.trim().toLowerCase()))];
+            if (uniqueOptions.length !== validOptions.length) {
+                return res.status(400).json({ error: 'Duplicate options are not allowed' });
+            }
+
+            await prisma.option.deleteMany({ where: { pollId: existingPoll.id } });
+            newOptionsData = validOptions.map(text => ({ text: text.trim() }));
+        }
+
         const updatedPoll = await prisma.poll.update({
             where: { id: existingPoll.id },
             data: {
                 question: updatedQuestion,
                 expiresAt: expiresAt !== undefined ? (expiresAt ? new Date(expiresAt) : null) : existingPoll.expiresAt,
                 chartType: chartType || existingPoll.chartType,
-                ...(options && {
-                    options: {
-                        create: updatedOptions,
-                    },
-                }),
+                ...(newOptionsData && { options: { create: newOptionsData } }),
             },
-            include: {
-                options: true,
-            },
+            include: { options: true },
         });
 
         return res.status(200).json({
@@ -626,17 +677,12 @@ export const updatePoll = async (req, res) => {
             voteId: updatedPoll.voteId,
             resultsId: updatedPoll.resultsId,
             question: updatedPoll.question,
-            options: updatedPoll.options.map(opt => ({
-                id: opt.id,
-                text: opt.text,
-            })),
+            options: updatedPoll.options.map(opt => ({ id: opt.id, text: opt.text })),
             message: 'Poll updated successfully',
         });
     } catch (error) {
         console.error('Error updating poll:', error);
-        return res.status(500).json({
-            error: 'Internal server error while updating poll',
-        });
+        return res.status(500).json({ error: 'Internal server error while updating poll' });
     }
 };
 
