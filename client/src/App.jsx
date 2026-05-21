@@ -6,6 +6,12 @@ import ResultsPage from "./pages/ResultsPage";
 import PollsPage from "./pages/PollsPage";
 import AppLayout from "./Components/AppLayout";
 import HomePage from "./pages/HomePage";
+import AdminLayout from "./pages/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
+import AdminPolls from "./pages/AdminPolls";
+import AdminLogin from "./pages/AdminLogin";
+import ProtectedRoute from "./Components/ProtectedRoute";
 
 export default function App() {
   return (
@@ -20,6 +26,16 @@ export default function App() {
           <Route path="share" element={<TestSharePage />} />
           {/* <Route path="history" element={<History />} /> */}
           {/* <Route path="settings" element={<Settings />} /> */}
+        </Route>
+        
+        {/* Admin Login Route */}
+        <Route path="/admin/login" element={<AdminLogin />} />
+        
+        {/* Protected Admin Routes */}
+        <Route path="/admin" element={<ProtectedRoute element={<AdminLayout />} />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="users" element={<AdminUsers />} />
+          <Route path="polls" element={<AdminPolls />} />
         </Route>
       </Routes>
     </BrowserRouter>

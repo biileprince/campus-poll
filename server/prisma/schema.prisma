@@ -10,6 +10,18 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model User {
+  id          String   @id @default(cuid())
+  email       String   @unique
+  name        String
+  role        String   @default("user") // user, admin
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  polls       Poll[]   // One user can create many polls
+
+  @@map("users")
+}
+
 model Poll {
   id          String   @id @default(cuid())
   question    String
@@ -17,6 +29,8 @@ model Poll {
   resultsId   String   @unique @default(cuid()) // Unique ID for results link
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  createdBy   String?  // User ID who created this poll
+  user        User?    @relation(fields: [createdBy], references: [id], onDelete: SetNull)
   options     Option[]
 
   @@map("polls")

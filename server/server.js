@@ -6,6 +6,7 @@ import morgan from 'morgan';
 
 // Import routes
 import pollRoutes from './routes/pollRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
@@ -64,6 +65,7 @@ app.get('/', (req, res) => {
 
 // API routes
 app.use('/api', pollRoutes);
+app.use('/api/admin', adminRoutes);
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);
