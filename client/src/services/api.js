@@ -103,6 +103,14 @@ export const submitVote = async (voteId, optionId) => {
 };
 
 /**
+ * Submit a text response for an open-ended question
+ */
+export const submitResponse = async (questionId, text, voteId) => {
+  const response = await api.post(`/respond/${questionId}`, { text, voteId });
+  return response.data;
+};
+
+/**
  * Get poll results
  * @param {string} resultsId - Results ID of the poll
  * @returns {Promise<Object>} Poll results data

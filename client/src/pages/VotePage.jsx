@@ -1,16 +1,21 @@
 import { useState, useEffect } from "react";
-import { Check, Calendar, Eye, Clock, Link2, User, ArrowLeft, AlertCircle, CheckCircle2, Loader2, Vote, Copy } from "lucide-react";
+import { Check, Calendar, Eye, Clock, Link2, User, ArrowLeft, AlertCircle, CheckCircle2, Loader2, Vote, Copy, MessageSquare } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { useGetPoll, useSubmitVote } from "../hooks/useApi";
+import { submitResponse } from "../services/api";
 
 function VotingPage() {
   const navigate = useNavigate();
   const { voteId } = useParams();
+  // Single-question state (legacy)
   const [selectedOptions, setSelectedOptions] = useState([]);
+  // Multi-question state: { [questionId]: string[] | string }
+  const [answers, setAnswers] = useState({});
   const [hasVoted, setHasVoted] = useState(false);
   const [previousVote, setPreviousVote] = useState(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [copiedLink, setCopiedLink] = useState(false);
+  const [localError, setLocalError] = useState("");
 
   const { data: poll, loading, error, execute: fetchPoll } = useGetPoll();
   const { loading: submitting, error: submitError, execute: submitVote } = useSubmitVote();
@@ -23,6 +28,9 @@ function VotingPage() {
     }
   }, [voteId]);
 
+  const isMulti = poll?.isMultiQuestion && Array.isArray(poll.questions) && poll.questions.length > 0;
+
+  // === Single-question handlers (legacy) ===
   const handleOptionClick = (optionId) => {
     if (hasVoted || poll?.isExpired) return;
     if (poll?.allowMultiple) {
@@ -32,16 +40,76 @@ function VotingPage() {
     }
   };
 
+  // === Multi-question handlers ===
+  const handleChoice = (question, optionId) => {
+    if (hasVoted || poll?.isExpired) return;
+    setAnswers((prev) => {
+      if (question.type === "multiple") {
+        const current = Array.isArray(prev[question.id]) ? prev[question.id] : [];
+        const next = current.includes(optionId)
+          ? current.filter((id) => id !== optionId)
+          : [...current, optionId];
+        return { ...prev, [question.id]: next };
+      }
+      return { ...prev, [question.id]: [optionId] };
+    });
+  };
+
+  const handleText = (questionId, text) => {
+    setAnswers((prev) => ({ ...prev, [questionId]: text }));
+  };
+
+  // === Submit ===
   const handleSubmit = async () => {
-    if (selectedOptions.length === 0 || !voteId || hasVoted || poll?.isExpired) return;
+    setLocalError("");
+    if (hasVoted || poll?.isExpired) return;
+
     try {
-      for (const optionId of selectedOptions) { await submitVote(voteId, optionId); }
-      const votedPolls = JSON.parse(localStorage.getItem("votedPolls") || "{}");
-      votedPolls[voteId] = { votedAt: new Date().toISOString(), options: selectedOptions };
-      localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
+      if (isMulti) {
+        // Validate all questions answered
+        for (const q of poll.questions) {
+          const ans = answers[q.id];
+          if (q.type === "open_ended") {
+            if (!ans || !ans.toString().trim()) {
+              setLocalError(`Please answer: "${q.text}"`); return;
+            }
+          } else {
+            if (!Array.isArray(ans) || ans.length === 0) {
+              setLocalError(`Please pick an answer for: "${q.text}"`); return;
+            }
+          }
+        }
+
+        // Submit each question's answer
+        for (const q of poll.questions) {
+          const ans = answers[q.id];
+          if (q.type === "open_ended") {
+            await submitResponse(q.id, ans.toString().trim(), voteId);
+          } else {
+            for (const optionId of ans) {
+              await submitVote(voteId, optionId);
+            }
+          }
+        }
+
+        const votedPolls = JSON.parse(localStorage.getItem("votedPolls") || "{}");
+        votedPolls[voteId] = { votedAt: new Date().toISOString(), answers };
+        localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
+      } else {
+        if (selectedOptions.length === 0 || !voteId) {
+          setLocalError("Please pick an answer"); return;
+        }
+        for (const optionId of selectedOptions) { await submitVote(voteId, optionId); }
+        const votedPolls = JSON.parse(localStorage.getItem("votedPolls") || "{}");
+        votedPolls[voteId] = { votedAt: new Date().toISOString(), options: selectedOptions };
+        localStorage.setItem("votedPolls", JSON.stringify(votedPolls));
+      }
       setShowSuccess(true);
       setHasVoted(true);
-    } catch (err) { console.error("Error submitting vote:", err); }
+    } catch (err) {
+      console.error("Error submitting vote:", err);
+      setLocalError(err.response?.data?.error || err.message || "Failed to submit. Please try again.");
+    }
   };
 
   const copyLink = async () => {
@@ -74,7 +142,6 @@ function VotingPage() {
     );
   }
 
-  // After voting
   if (showSuccess) {
     return (
       <div className="page-enter max-w-lg mx-auto px-4 sm:px-6 py-12 sm:py-20">
@@ -83,7 +150,7 @@ function VotingPage() {
             <CheckCircle2 size={40} className="text-green-600" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Thanks for voting!</h1>
-          <p className="text-gray-500 text-sm mb-8">Your answer has been recorded.</p>
+          <p className="text-gray-500 text-sm mb-8">Your answer{isMulti ? "s have" : " has"} been recorded.</p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
             <button onClick={() => navigate(`/results/${poll.resultsId}`)} className="btn-primary py-3 px-6"><Eye size={16} /> See Results</button>
             <button onClick={copyLink} className="btn-secondary py-3 px-6">
@@ -96,6 +163,71 @@ function VotingPage() {
   }
 
   const isExpired = poll.isExpired;
+  const isDisabled = hasVoted || isExpired;
+
+  // Render a single choice/open-ended question block
+  const renderQuestion = (q, qIdx) => {
+    const ans = answers[q.id];
+    const selected = Array.isArray(ans) ? ans : [];
+
+    if (q.type === "open_ended") {
+      return (
+        <div key={q.id} className="card-flat p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: `${qIdx * 50}ms` }}>
+          <div className="flex items-start gap-3 mb-4">
+            <span className="w-6 h-6 rounded-md bg-brand-600 text-white text-xs flex items-center justify-center flex-shrink-0 font-bold">{qIdx + 1}</span>
+            <div className="flex-1">
+              <h3 className="text-base font-semibold text-gray-900">{q.text}</h3>
+              <p className="text-xs text-gray-400 mt-0.5">Type your answer below</p>
+            </div>
+            <MessageSquare size={16} className="text-gray-300" />
+          </div>
+          <textarea
+            value={typeof ans === "string" ? ans : ""}
+            onChange={(e) => handleText(q.id, e.target.value)}
+            disabled={isDisabled}
+            placeholder="Type your answer..."
+            className="input w-full min-h-[100px] resize-y"
+            maxLength={1000}
+          />
+          <p className="text-xs text-gray-400 mt-1 text-right">{(typeof ans === "string" ? ans.length : 0)}/1000</p>
+        </div>
+      );
+    }
+
+    return (
+      <div key={q.id} className="card-flat p-5 sm:p-6 animate-fade-in-up" style={{ animationDelay: `${qIdx * 50}ms` }}>
+        <div className="flex items-start gap-3 mb-4">
+          <span className="w-6 h-6 rounded-md bg-brand-600 text-white text-xs flex items-center justify-center flex-shrink-0 font-bold">{qIdx + 1}</span>
+          <div className="flex-1">
+            <h3 className="text-base font-semibold text-gray-900">{q.text}</h3>
+            <p className="text-xs text-gray-400 mt-0.5">{q.type === "multiple" ? "Pick one or more" : "Pick one"}</p>
+          </div>
+        </div>
+        <div className="space-y-2.5">
+          {q.options.map((option, oIdx) => {
+            const isSelected = selected.includes(option.id);
+            return (
+              <button
+                key={option.id}
+                onClick={() => handleChoice(q, option.id)}
+                disabled={isDisabled}
+                className={`w-full flex items-center gap-3 p-3.5 rounded-xl border-2 transition-all text-left
+                  ${isDisabled ? "cursor-not-allowed opacity-70" : "hover:border-brand-300 hover:bg-brand-50/30"}
+                  ${isSelected ? "border-brand-500 bg-brand-50" : "border-gray-200 bg-white"}`}
+                style={{ animationDelay: `${oIdx * 30}ms` }}
+              >
+                <div className={`w-5 h-5 ${q.type === "multiple" ? "rounded-md" : "rounded-full"} border-2 flex items-center justify-center flex-shrink-0 transition-all
+                  ${isSelected ? "border-brand-500 bg-brand-500" : "border-gray-300"}`}>
+                  {isSelected && (q.type === "multiple" ? <Check size={12} className="text-white" /> : <div className="w-2 h-2 bg-white rounded-full" />)}
+                </div>
+                <span className={`text-sm font-medium ${isSelected ? "text-brand-800" : "text-gray-800"}`}>{option.text}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="page-enter">
@@ -106,7 +238,8 @@ function VotingPage() {
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
           {/* Left */}
-          <div className="lg:col-span-2">
+          <div className="lg:col-span-2 space-y-4">
+            {/* Header card */}
             <div className="card-flat p-5 sm:p-7">
               {isExpired ? (
                 <div className="badge badge-neutral mb-4"><Clock size={12} /> Poll Closed</div>
@@ -117,14 +250,15 @@ function VotingPage() {
               )}
 
               <h1 className="text-xl sm:text-2xl font-bold text-gray-900 mb-2">{poll.question}</h1>
-              <p className="text-sm text-gray-500 mb-6">
+              <p className="text-sm text-gray-500">
                 {isExpired ? "This poll is closed. You can still see the results." :
-                 hasVoted ? "You already picked your answer. Check the results to see how others voted." :
+                 hasVoted ? "You already submitted your answers. Check the results." :
+                 isMulti ? `Answer ${poll.questions.length} question${poll.questions.length > 1 ? "s" : ""} below.` :
                  poll.allowMultiple ? "You can pick more than one." : "Pick the answer you like best."}
               </p>
 
               {(hasVoted || isExpired) && !showSuccess && (
-                <div className={`mb-6 p-4 rounded-xl flex items-start gap-3 ${isExpired ? "bg-gray-50 border border-gray-200" : "bg-blue-50 border border-blue-100"}`}>
+                <div className={`mt-4 p-4 rounded-xl flex items-start gap-3 ${isExpired ? "bg-gray-50 border border-gray-200" : "bg-blue-50 border border-blue-100"}`}>
                   <AlertCircle size={18} className="flex-shrink-0 mt-0.5 text-gray-400" />
                   <div>
                     <p className="text-sm font-semibold text-gray-700">{isExpired ? "Voting is over" : "You already voted"}</p>
@@ -132,36 +266,45 @@ function VotingPage() {
                   </div>
                 </div>
               )}
+            </div>
 
-              <div className="space-y-2.5 mb-6">
-                {poll.options.map((option, index) => {
-                  const isSelected = selectedOptions.includes(option.id);
-                  const isDisabled = hasVoted || isExpired;
-                  const wasPrevious = previousVote?.options?.includes(option.id);
+            {/* Questions */}
+            {isMulti ? (
+              poll.questions.map((q, i) => renderQuestion(q, i))
+            ) : (
+              <div className="card-flat p-5 sm:p-7">
+                <div className="space-y-2.5">
+                  {poll.options.map((option, index) => {
+                    const isSelected = selectedOptions.includes(option.id);
+                    const wasPrevious = previousVote?.options?.includes(option.id);
 
-                  return (
-                    <button key={option.id} onClick={() => handleOptionClick(option.id)} disabled={isDisabled}
-                      className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all animate-fade-in-up
-                        ${isDisabled ? "cursor-not-allowed" : "hover:border-brand-300 hover:bg-brand-50/30"}
-                        ${isSelected ? "border-brand-500 bg-brand-50" : wasPrevious ? "border-brand-200 bg-brand-50/40" : "border-gray-200 bg-white"}`}
-                      style={{ animationDelay: `${index * 50}ms` }}>
-                      <div className="flex items-center gap-3">
-                        <div className={`w-5 h-5 ${poll.allowMultiple ? "rounded-md" : "rounded-full"} border-2 flex items-center justify-center flex-shrink-0 transition-all
-                          ${isSelected ? "border-brand-500 bg-brand-500" : wasPrevious ? "border-brand-300 bg-brand-100" : "border-gray-300"}`}>
-                          {isSelected && (poll.allowMultiple ? <Check size={12} className="text-white" /> : <div className="w-2 h-2 bg-white rounded-full" />)}
-                          {wasPrevious && !isSelected && <Check size={12} className="text-brand-400" />}
+                    return (
+                      <button key={option.id} onClick={() => handleOptionClick(option.id)} disabled={isDisabled}
+                        className={`w-full flex items-center justify-between p-4 rounded-xl border-2 transition-all animate-fade-in-up
+                          ${isDisabled ? "cursor-not-allowed" : "hover:border-brand-300 hover:bg-brand-50/30"}
+                          ${isSelected ? "border-brand-500 bg-brand-50" : wasPrevious ? "border-brand-200 bg-brand-50/40" : "border-gray-200 bg-white"}`}
+                        style={{ animationDelay: `${index * 50}ms` }}>
+                        <div className="flex items-center gap-3">
+                          <div className={`w-5 h-5 ${poll.allowMultiple ? "rounded-md" : "rounded-full"} border-2 flex items-center justify-center flex-shrink-0 transition-all
+                            ${isSelected ? "border-brand-500 bg-brand-500" : wasPrevious ? "border-brand-300 bg-brand-100" : "border-gray-300"}`}>
+                            {isSelected && (poll.allowMultiple ? <Check size={12} className="text-white" /> : <div className="w-2 h-2 bg-white rounded-full" />)}
+                            {wasPrevious && !isSelected && <Check size={12} className="text-brand-400" />}
+                          </div>
+                          <span className={`text-sm font-medium text-left ${isSelected ? "text-brand-800" : "text-gray-800"}`}>{option.text}</span>
                         </div>
-                        <span className={`text-sm font-medium text-left ${isSelected ? "text-brand-800" : "text-gray-800"}`}>{option.text}</span>
-                      </div>
-                      {wasPrevious && <span className="badge badge-brand text-[10px]">Your pick</span>}
-                    </button>
-                  );
-                })}
+                        {wasPrevious && <span className="badge badge-brand text-[10px]">Your pick</span>}
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
+            )}
 
+            {/* Submit */}
+            <div className="card-flat p-5">
               {!hasVoted && !isExpired && (
-                <button onClick={handleSubmit} disabled={selectedOptions.length === 0 || submitting} className="btn-primary w-full py-3.5 text-base">
-                  {submitting ? (<><Loader2 size={18} className="animate-spin" /> Submitting...</>) : (<><Vote size={18} /> Submit Vote{poll.allowMultiple && selectedOptions.length > 1 ? `s (${selectedOptions.length})` : ""}</>)}
+                <button onClick={handleSubmit} disabled={submitting} className="btn-primary w-full py-3.5 text-base">
+                  {submitting ? (<><Loader2 size={18} className="animate-spin" /> Submitting...</>) : (<><Vote size={18} /> Submit {isMulti ? "Answers" : "Vote"}</>)}
                 </button>
               )}
 
@@ -169,7 +312,7 @@ function VotingPage() {
                 <button onClick={() => navigate(`/results/${poll.resultsId}`)} className="btn-primary w-full py-3.5 text-base"><Eye size={18} /> See Results</button>
               )}
 
-              {submitError && <p className="text-sm mt-3 text-red-600">{submitError}</p>}
+              {(localError || submitError) && <p className="text-sm mt-3 text-red-600">{localError || submitError}</p>}
             </div>
           </div>
 
@@ -188,8 +331,8 @@ function VotingPage() {
               </div>
               <div className="space-y-3">
                 <div className="flex items-center gap-3 text-xs text-gray-500"><Calendar size={14} className="text-gray-400" /> {new Date(poll.createdAt).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</div>
-                <div className="flex items-center gap-3 text-xs text-gray-500"><Eye size={14} className="text-gray-400" /> {poll.totalVotes || 0} votes so far</div>
-                {poll.allowMultiple && <div className="flex items-center gap-3 text-xs text-gray-500"><CheckCircle2 size={14} className="text-gray-400" /> You can pick more than one</div>}
+                {isMulti && <div className="flex items-center gap-3 text-xs text-gray-500"><MessageSquare size={14} className="text-gray-400" /> {poll.questions.length} question{poll.questions.length > 1 ? "s" : ""}</div>}
+                {!isMulti && poll.allowMultiple && <div className="flex items-center gap-3 text-xs text-gray-500"><CheckCircle2 size={14} className="text-gray-400" /> You can pick more than one</div>}
               </div>
             </div>
             <div className="card-flat p-5">

@@ -79,16 +79,11 @@ export const sanitizeXSS = (req, res, next) => {
 };
 
 /**
- * Content Security Policy headers
- * Helps prevent XSS attacks by restricting resource loading
+ * Additional security headers
+ * CSP is handled by helmet() in server.js — do not set it here or it will
+ * overwrite the helmet policy that allows Google Fonts and Google Sign-In.
  */
 export const setSecurityHeaders = (req, res, next) => {
-    // Content Security Policy
-    res.setHeader(
-        'Content-Security-Policy',
-        "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;"
-    );
-
     // Prevent MIME type sniffing
     res.setHeader('X-Content-Type-Options', 'nosniff');
 

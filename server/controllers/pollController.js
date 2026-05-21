@@ -338,7 +338,10 @@ export const castVote = async (req, res) => {
 
         const poll = await prisma.poll.findUnique({
             where: { voteId },
-            include: { options: true },
+            include: {
+                options: true,
+                questions: { include: { options: true } },
+            },
         });
 
         if (!poll) {
@@ -347,8 +350,18 @@ export const castVote = async (req, res) => {
             });
         }
 
-        const selectedOption = poll.options.find(opt => opt.id === optionId);
-        if (!selectedOption) {
+        // Block voting on expired polls
+        if (poll.expiresAt && new Date(poll.expiresAt) < new Date()) {
+            return res.status(400).json({ error: 'This poll is closed' });
+        }
+
+        // Check both legacy options and question-level options
+        const legacyOption = poll.options.find(opt => opt.id === optionId);
+        const questionOption = !legacyOption && poll.questions
+            ? poll.questions.flatMap(q => q.options).find(opt => opt.id === optionId)
+            : null;
+
+        if (!legacyOption && !questionOption) {
             return res.status(400).json({
                 error: 'Option does not belong to this poll',
             });
@@ -440,10 +453,16 @@ export const getPollResults = async (req, res) => {
             where: { resultsId },
             include: {
                 options: {
-                    select: {
-                        id: true,
-                        text: true,
-                        voteCount: true,
+                    select: { id: true, text: true, voteCount: true },
+                },
+                questions: {
+                    orderBy: { order: 'asc' },
+                    include: {
+                        options: { select: { id: true, text: true, voteCount: true } },
+                        responses: {
+                            select: { id: true, text: true, createdAt: true },
+                            orderBy: { createdAt: 'desc' },
+                        },
                     },
                 },
             },
@@ -455,7 +474,17 @@ export const getPollResults = async (req, res) => {
             });
         }
 
-        const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+        const isMultiQuestion = poll.questions && poll.questions.length > 0;
+
+        // Compute totals
+        const legacyVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+        const multiVotes = isMultiQuestion
+            ? poll.questions.reduce((sum, q) => {
+                if (q.type === 'open_ended') return sum + q.responses.length;
+                return sum + q.options.reduce((s, o) => s + o.voteCount, 0);
+            }, 0)
+            : 0;
+        const totalVotes = isMultiQuestion ? multiVotes : legacyVotes;
 
         // Check if poll is expired
         const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
@@ -474,12 +503,36 @@ export const getPollResults = async (req, res) => {
             chartType: poll.chartType || 'pie',
             expiresAt: poll.expiresAt,
             createdAt: poll.createdAt,
+            isMultiQuestion,
+            // Legacy: top-level options for single-question polls
             options: poll.options.map(option => ({
                 id: option.id,
                 text: option.text,
                 voteCount: option.voteCount,
-                percentage: totalVotes > 0 ? Math.round((option.voteCount / totalVotes) * 100) : 0,
+                percentage: legacyVotes > 0 ? Math.round((option.voteCount / legacyVotes) * 100) : 0,
             })),
+            // Multi-question data
+            questions: isMultiQuestion ? poll.questions.map(q => {
+                const qTotal = q.type === 'open_ended'
+                    ? q.responses.length
+                    : q.options.reduce((s, o) => s + o.voteCount, 0);
+                return {
+                    id: q.id,
+                    text: q.text,
+                    type: q.type,
+                    order: q.order,
+                    totalVotes: qTotal,
+                    options: q.options.map(o => ({
+                        id: o.id,
+                        text: o.text,
+                        voteCount: o.voteCount,
+                        percentage: qTotal > 0 ? Math.round((o.voteCount / qTotal) * 100) : 0,
+                    })),
+                    responses: q.type === 'open_ended'
+                        ? q.responses.map(r => ({ id: r.id, text: r.text, createdAt: r.createdAt }))
+                        : [],
+                };
+            }) : [],
         };
 
         return res.status(200).json(response);
