@@ -34,14 +34,20 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor — preserve the original axios error so callers can read
+// error.response.status / error.response.data. Surfacing a custom .message is
+// convenient for default text rendering, but we must not throw away .response.
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    const errorMessage = error.response?.data?.error || error.message || 'An unexpected error occurred';
-    return Promise.reject(new Error(errorMessage));
+    if (error.response?.data) {
+      const data = error.response.data;
+      // Use the first validation detail message if present, then specific
+      // error/message fields, then fall back to axios's own message.
+      const detailMsg = Array.isArray(data.details) && data.details[0]?.message;
+      error.message = detailMsg || data.error || data.message || error.message;
+    }
+    return Promise.reject(error);
   }
 );
 

@@ -34,10 +34,11 @@ export default function LoginPage() {
 
     window.google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      use_fedcm_for_prompt: true,
       callback: async (response) => {
         try {
           const res = await api.post("/auth/google", { credential: response.credential });
-          const { token, user } = res.data.data || res.data;
+          const { token } = res.data.data || res.data;
           localStorage.setItem("token", token);
           api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
           window.location.href = "/";
@@ -48,22 +49,21 @@ export default function LoginPage() {
       },
     });
 
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        // Fallback: render the button
-        const btnContainer = document.getElementById("google-btn-container");
-        if (btnContainer) {
-          btnContainer.innerHTML = "";
-          window.google.accounts.id.renderButton(btnContainer, {
-            theme: "outline",
-            size: "large",
-            width: "100%",
-            text: "continue_with",
-          });
-        }
-        setGoogleLoading(false);
-      }
-    });
+    // Render the official Google button (FedCM-compatible). Width must be a
+    // numeric pixel value between 200 and 400 — "100%" is rejected by GSI.
+    const btnContainer = document.getElementById("google-btn-container");
+    if (btnContainer) {
+      btnContainer.innerHTML = "";
+      const width = Math.min(400, Math.max(200, btnContainer.clientWidth || 360));
+      window.google.accounts.id.renderButton(btnContainer, {
+        theme: "outline",
+        size: "large",
+        width,
+        text: "continue_with",
+        shape: "rectangular",
+      });
+    }
+    setGoogleLoading(false);
   };
 
   const errorMessage = localError || authError;

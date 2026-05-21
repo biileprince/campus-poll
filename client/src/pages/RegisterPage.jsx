@@ -39,6 +39,7 @@ export default function RegisterPage() {
 
     window.google.accounts.id.initialize({
       client_id: import.meta.env.VITE_GOOGLE_CLIENT_ID,
+      use_fedcm_for_prompt: true,
       callback: async (response) => {
         try {
           const res = await api.post("/auth/google", { credential: response.credential });
@@ -53,16 +54,19 @@ export default function RegisterPage() {
       },
     });
 
-    window.google.accounts.id.prompt((notification) => {
-      if (notification.isNotDisplayed() || notification.isSkippedMoment()) {
-        const btnContainer = document.getElementById("google-btn-container");
-        if (btnContainer) {
-          btnContainer.innerHTML = "";
-          window.google.accounts.id.renderButton(btnContainer, { theme: "outline", size: "large", width: "100%", text: "signup_with" });
-        }
-        setGoogleLoading(false);
-      }
-    });
+    const btnContainer = document.getElementById("google-btn-container");
+    if (btnContainer) {
+      btnContainer.innerHTML = "";
+      const width = Math.min(400, Math.max(200, btnContainer.clientWidth || 360));
+      window.google.accounts.id.renderButton(btnContainer, {
+        theme: "outline",
+        size: "large",
+        width,
+        text: "signup_with",
+        shape: "rectangular",
+      });
+    }
+    setGoogleLoading(false);
   };
 
   const errorMessage = localError || authError;
