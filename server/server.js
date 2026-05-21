@@ -3,14 +3,25 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import helmet from 'helmet';
 import morgan from 'morgan';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import swaggerUi from 'swagger-ui-express';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 // Import routes
 import pollRoutes from './routes/pollRoutes.js';
+import authRoutes from './routes/authRoutes.js';
+import adminRoutes from './routes/adminRoutes.js';
 
 // Import middleware
 import { errorHandler, notFoundHandler } from './middlewares/errorHandler.js';
 import { apiLimiter } from './middlewares/rateLimiter.js';
 import { sanitizeData, preventParameterPollution, sanitizeXSS, setSecurityHeaders } from './middlewares/sanitizer.js';
+
+// Import Swagger config
+import { swaggerSpec } from './config/swagger.js';
 
 // Load environment variables
 dotenv.config();
@@ -18,8 +29,28 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// Security middleware
-app.use(helmet());
+// Enable trust proxy for rate limiting behind Render's reverse proxy
+app.set('trust proxy', 1);
+
+// Security middleware with CSP configuration
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      connectSrc: ["'self'", "https://accounts.google.com", "https://*.googleapis.com"],
+      scriptSrc: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com"],
+      scriptSrcElem: ["'self'", "'unsafe-inline'", "https://accounts.google.com", "https://apis.google.com"],
+      styleSrc: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
+      styleSrcElem: ["'self'", "'unsafe-inline'", "https://fonts.googleapis.com", "https://accounts.google.com"],
+      fontSrc: ["'self'", "https://fonts.gstatic.com", "data:"],
+      imgSrc: ["'self'", "data:", "https:"],
+      frameSrc: ["'self'", "https://accounts.google.com"],
+      formAction: ["'self'", "https://accounts.google.com"],
+      workerSrc: ["'self'", "blob:"],
+    },
+  },
+  crossOriginOpenerPolicy: { policy: "same-origin-allow-popups" },
+}));
 
 // Security headers
 app.use(setSecurityHeaders);
@@ -53,17 +84,25 @@ if (process.env.NODE_ENV === 'development') {
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Health check endpoint
-app.get('/', (req, res) => {
-  res.json({
-    message: 'Campus Poll API',
-    version: '1.0.0',
-    status: 'running',
-  });
-});
+// Serve static files from React build
+app.use(express.static(path.join(__dirname, '../client/dist')));
+
+// Swagger UI setup
+app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(swaggerSpec, {
+  explorer: true,
+  customCss: '.swagger-ui .topbar { display: none }',
+  customSiteTitle: "Campus Poll API Documentation"
+}));
 
 // API routes
+app.use('/api/auth', authRoutes);
+app.use('/api/admin', adminRoutes);
 app.use('/api', pollRoutes);
+
+// Serve React app for all other routes (React Router handling)
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, '../client/dist/index.html'));
+});
 
 // 404 handler - must be after all routes
 app.use(notFoundHandler);

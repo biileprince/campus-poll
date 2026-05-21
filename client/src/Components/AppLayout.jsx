@@ -8,22 +8,26 @@ export default function AppLayout() {
 
   return (
     <div className="flex h-screen overflow-hidden">
-      {/* Mobile sidebar backdrop */}
-      {sidebarOpen && (
-        <div
-          className="fixed inset-0 bg-black bg-opacity-50 z-20 lg:hidden"
-          onClick={() => setSidebarOpen(false)}
-        />
-      )}
-
       <Sidebar isOpen={sidebarOpen} onClose={() => setSidebarOpen(false)} />
 
-      <div className="flex-1 flex flex-col lg:ml-64">
+      <div
+        className="flex-1 flex flex-col min-w-0"
+        style={{ marginLeft: "0" }}
+      >
         <Header onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
-        <main className="flex-1 overflow-y-auto pt-16 bg-gray-50">
-          <Outlet />
+        <main
+          className="flex-1 overflow-y-auto overflow-x-hidden"
+          style={{
+            paddingTop: "var(--header-height)",
+            backgroundColor: "var(--surface-bg)",
+          }}
+        >
+          <div className="lg:ml-[var(--sidebar-width)]">
+            <Outlet />
+          </div>
         </main>
       </div>
     </div>
   );
 }
+

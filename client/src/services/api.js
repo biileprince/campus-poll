@@ -1,6 +1,19 @@
 import axios from 'axios';
 
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+// Determine API base URL based on environment
+// In production (Render), use relative path since frontend is served by same server
+// In development, use localhost with appropriate port
+const getApiBaseUrl = () => {
+  // Check if we're in production mode
+  if (import.meta.env.MODE === 'production') {
+    return '/api';
+  }
+
+  // Development mode - use env variable or default localhost
+  return import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api';
+};
+
+const API_BASE_URL = getApiBaseUrl();
 
 // Create axios instance with default config
 const api = axios.create({
@@ -21,24 +34,31 @@ api.interceptors.request.use(
   }
 );
 
-// Response interceptor for error handling
+// Response interceptor — preserve the original axios error so callers can read
+// error.response.status / error.response.data. Surfacing a custom .message is
+// convenient for default text rendering, but we must not throw away .response.
 api.interceptors.response.use(
-  (response) => {
-    return response;
-  },
+  (response) => response,
   (error) => {
-    const errorMessage = error.response?.data?.error || error.message || 'An unexpected error occurred';
-    return Promise.reject(new Error(errorMessage));
+    if (error.response?.data) {
+      const data = error.response.data;
+      // Use the first validation detail message if present, then specific
+      // error/message fields, then fall back to axios's own message.
+      const detailMsg = Array.isArray(data.details) && data.details[0]?.message;
+      error.message = detailMsg || data.error || data.message || error.message;
+    }
+    return Promise.reject(error);
   }
 );
 
 /**
- * Get all polls
- * @returns {Promise<Object>} List of polls
+ * Get all polls with optional pagination and search
+ * @param {Object} params - { page, limit, search }
+ * @returns {Promise<Object>} { polls, total, pagination }
  */
-export const getAllPolls = async () => {
+export const getAllPolls = async (params = {}) => {
   try {
-    const response = await api.get('/polls');
+    const response = await api.get('/polls', { params });
     return response.data;
   } catch (error) {
     throw error;
@@ -89,6 +109,14 @@ export const submitVote = async (voteId, optionId) => {
 };
 
 /**
+ * Submit a text response for an open-ended question
+ */
+export const submitResponse = async (questionId, text, voteId) => {
+  const response = await api.post(`/respond/${questionId}`, { text, voteId });
+  return response.data;
+};
+
+/**
  * Get poll results
  * @param {string} resultsId - Results ID of the poll
  * @returns {Promise<Object>} Poll results data
@@ -96,6 +124,48 @@ export const submitVote = async (voteId, optionId) => {
 export const getPollResults = async (resultsId) => {
   try {
     const response = await api.get(`/results/${resultsId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Get user's polls
+ * @returns {Promise<Object>} User's polls
+ */
+export const getMyPolls = async () => {
+  try {
+    const response = await api.get('/my-polls');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Update a poll
+ * @param {string} resultsId - Results ID of the poll
+ * @param {Object} pollData - Updated poll data
+ * @returns {Promise<Object>} Updated poll
+ */
+export const updatePoll = async (resultsId, pollData) => {
+  try {
+    const response = await api.put(`/polls/${resultsId}`, pollData);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+/**
+ * Delete a poll
+ * @param {string} resultsId - Results ID of the poll
+ * @returns {Promise<Object>} Deletion response
+ */
+export const deletePoll = async (resultsId) => {
+  try {
+    const response = await api.delete(`/polls/${resultsId}`);
     return response.data;
   } catch (error) {
     throw error;
