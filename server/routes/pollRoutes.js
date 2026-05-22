@@ -106,19 +106,13 @@ router.get('/polls', getAllPolls);
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 id: { type: string }
- *                 voteId: { type: string }
- *                 resultsId: { type: string }
- *                 votingUrl: { type: string, example: "/poll/abc123" }
- *                 resultsUrl: { type: string, example: "/results/xyz789" }
+ *               $ref: '#/components/schemas/CreatePollResponse'
  *       400:
  *         description: Validation error
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Error'
+ *               $ref: '#/components/schemas/ValidationError'
  *       429:
  *         description: Rate limit exceeded
  */
@@ -136,6 +130,13 @@ router.post('/polls', createPollLimiter, optionalAuth, validateCreatePoll, creat
  *     responses:
  *       200:
  *         description: List of user's polls with stats
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 polls: { type: array, items: { $ref: '#/components/schemas/PollListItem' } }
+ *                 total: { type: integer }
  *       401:
  *         description: Not authenticated
  */
@@ -160,18 +161,14 @@ router.get('/my-polls', protect, getMyPolls);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             properties:
- *               question: { type: string }
- *               options: { type: array, items: { type: string } }
- *               expiresAt: { type: string, format: date-time, nullable: true }
+ *             $ref: '#/components/schemas/UpdatePollRequest'
  *     responses:
  *       200:
  *         description: Poll updated
  *       400:
  *         description: Validation error
  *       403:
- *         description: Not the poll owner
+ *         description: Not the poll owner / poll has votes
  *       404:
  *         description: Poll not found
  */
@@ -247,23 +244,14 @@ router.get('/poll/:voteId', validateGetPoll, getPollByVoteId);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [voteId]
- *             properties:
- *               voteId:
- *                 type: string
- *                 description: The poll's voting ID (to verify the option belongs to this poll)
+ *             $ref: '#/components/schemas/VoteRequest'
  *     responses:
  *       200:
  *         description: Vote recorded
  *         content:
  *           application/json:
  *             schema:
- *               type: object
- *               properties:
- *                 success: { type: boolean, example: true }
- *                 message: { type: string, example: "Vote recorded successfully" }
- *                 voteCount: { type: integer }
+ *               $ref: '#/components/schemas/VoteResponse'
  *       400:
  *         description: Invalid option or poll expired
  *       404:
@@ -290,16 +278,18 @@ router.post('/vote/:optionId', voteLimiter, validateCastVote, castVote);
  *       content:
  *         application/json:
  *           schema:
- *             type: object
- *             required: [text]
- *             properties:
- *               text:
- *                 type: string
- *                 maxLength: 1000
- *                 example: "I think we need better WiFi coverage in the library."
+ *             $ref: '#/components/schemas/SubmitResponseRequest'
  *     responses:
  *       201:
  *         description: Response submitted
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 success: { type: boolean, example: true }
+ *                 message: { type: string, example: "Response submitted" }
+ *                 response: { $ref: '#/components/schemas/Response' }
  *       400:
  *         description: Invalid question type or poll closed
  *       404:
@@ -330,7 +320,7 @@ router.post('/respond/:questionId', voteLimiter, submitResponse);
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Poll'
+ *               $ref: '#/components/schemas/PollResults'
  *       404:
  *         description: Poll not found
  *       429:

@@ -27,6 +27,12 @@ router.use(requireAdmin);
  *     responses:
  *       200:
  *         description: Platform statistics
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AdminStats'
+ *       401:
+ *         description: Not authenticated
  *       403:
  *         description: Admin access required
  */
@@ -54,6 +60,12 @@ router.get('/stats', getAdminStats);
  *     responses:
  *       200:
  *         description: Paginated list of users
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AdminPaginatedUsers'
+ *       401:
+ *         description: Not authenticated
  *       403:
  *         description: Admin access required
  */
@@ -83,6 +95,12 @@ router.get('/users', getAllUsers);
  *     responses:
  *       200:
  *         description: Paginated list of polls with creator info
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AdminPaginatedPolls'
+ *       401:
+ *         description: Not authenticated
  *       403:
  *         description: Admin access required
  */

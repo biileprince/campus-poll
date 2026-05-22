@@ -42,13 +42,37 @@ export const getAllPolls = async (req, res) => {
             take: limit,
             include: {
                 options: { select: { id: true, text: true, voteCount: true } },
-                questions: { select: { id: true, type: true } },
+                questions: {
+                    select: {
+                        id: true,
+                        type: true,
+                        options: { select: { voteCount: true } },
+                        _count: { select: { responses: true } },
+                    },
+                },
             },
         });
 
         let pollsWithStats = polls.map(poll => {
-            const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+            const isMultiQuestion = poll.questions && poll.questions.length > 0;
+
+            const legacyVotes = poll.options.reduce((sum, o) => sum + o.voteCount, 0);
+            const multiVotes = isMultiQuestion
+                ? poll.questions.reduce((sum, q) => {
+                    if (q.type === 'open_ended') return sum + (q._count?.responses || 0);
+                    return sum + q.options.reduce((s, o) => s + o.voteCount, 0);
+                }, 0)
+                : 0;
+
+            const totalVotes = isMultiQuestion ? multiVotes : legacyVotes;
+
+            const multiOptionCount = isMultiQuestion
+                ? poll.questions.reduce((sum, q) => sum + (q.options?.length || 0), 0)
+                : 0;
+            const optionCount = isMultiQuestion ? multiOptionCount : poll.options.length;
+
             const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
+
             return {
                 id: poll.id,
                 question: poll.question,
@@ -58,7 +82,8 @@ export const getAllPolls = async (req, res) => {
                 expiresAt: poll.expiresAt,
                 chartType: poll.chartType,
                 totalVotes,
-                optionCount: poll.options.length,
+                optionCount,
+                isMultiQuestion,
                 questionCount: poll.questions?.length || 0,
                 hasOpenEnded: poll.questions?.some(q => q.type === 'open_ended') || false,
                 status: isExpired ? 'Expired' : 'Active',
@@ -94,25 +119,38 @@ export const getMyPolls = async (req, res) => {
         const userId = req.user.id;
 
         const polls = await prisma.poll.findMany({
-            where: {
-                creatorId: userId,
-            },
-            orderBy: {
-                createdAt: 'desc',
-            },
+            where: { creatorId: userId },
+            orderBy: { createdAt: 'desc' },
             include: {
-                options: {
+                options: { select: { id: true, text: true, voteCount: true } },
+                questions: {
                     select: {
                         id: true,
-                        text: true,
-                        voteCount: true,
+                        type: true,
+                        options: { select: { voteCount: true } },
+                        _count: { select: { responses: true } },
                     },
                 },
             },
         });
 
         const pollsWithStats = polls.map(poll => {
-            const totalVotes = poll.options.reduce((sum, option) => sum + option.voteCount, 0);
+            const isMultiQuestion = poll.questions && poll.questions.length > 0;
+
+            const legacyVotes = poll.options.reduce((sum, o) => sum + o.voteCount, 0);
+            const multiVotes = isMultiQuestion
+                ? poll.questions.reduce((sum, q) => {
+                    if (q.type === 'open_ended') return sum + (q._count?.responses || 0);
+                    return sum + q.options.reduce((s, o) => s + o.voteCount, 0);
+                }, 0)
+                : 0;
+            const totalVotes = isMultiQuestion ? multiVotes : legacyVotes;
+
+            const multiOptionCount = isMultiQuestion
+                ? poll.questions.reduce((sum, q) => sum + (q.options?.length || 0), 0)
+                : 0;
+            const optionCount = isMultiQuestion ? multiOptionCount : poll.options.length;
+
             const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
             return {
                 id: poll.id,
@@ -122,8 +160,10 @@ export const getMyPolls = async (req, res) => {
                 createdAt: poll.createdAt,
                 expiresAt: poll.expiresAt,
                 chartType: poll.chartType,
-                totalVotes: totalVotes,
-                optionCount: poll.options.length,
+                totalVotes,
+                optionCount,
+                isMultiQuestion,
+                questionCount: poll.questions?.length || 0,
                 status: isExpired ? 'Expired' : 'Active',
                 canEdit: totalVotes === 0,
             };

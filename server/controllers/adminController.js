@@ -6,13 +6,15 @@ import prisma from '../utils/prisma.js';
  */
 export const getAdminStats = async (req, res) => {
     try {
-        const [totalUsers, totalPolls, totalOptions] = await Promise.all([
+        const [totalUsers, totalPolls, totalOptions, totalResponses] = await Promise.all([
             prisma.user.count(),
             prisma.poll.count(),
             prisma.option.findMany({ select: { voteCount: true } }),
+            prisma.response.count(),
         ]);
 
-        const totalVotes = totalOptions.reduce((sum, o) => sum + o.voteCount, 0);
+        const totalChoiceVotes = totalOptions.reduce((sum, o) => sum + o.voteCount, 0);
+        const totalVotes = totalChoiceVotes + totalResponses;
 
         const activePolls = await prisma.poll.count({
             where: {
@@ -149,6 +151,14 @@ export const getAdminPolls = async (req, res) => {
                 orderBy: { createdAt: 'desc' },
                 include: {
                     options: { select: { voteCount: true } },
+                    questions: {
+                        select: {
+                            id: true,
+                            type: true,
+                            options: { select: { voteCount: true } },
+                            _count: { select: { responses: true } },
+                        },
+                    },
                     creator: { select: { id: true, email: true, name: true, role: true } },
                 },
             }),
@@ -161,7 +171,19 @@ export const getAdminPolls = async (req, res) => {
             success: true,
             data: {
                 polls: polls.map(poll => {
-                    const totalVotes = poll.options.reduce((sum, o) => sum + o.voteCount, 0);
+                    const isMultiQuestion = poll.questions && poll.questions.length > 0;
+                    const legacyVotes = poll.options.reduce((sum, o) => sum + o.voteCount, 0);
+                    const multiVotes = isMultiQuestion
+                        ? poll.questions.reduce((sum, q) => {
+                            if (q.type === 'open_ended') return sum + (q._count?.responses || 0);
+                            return sum + q.options.reduce((s, o) => s + o.voteCount, 0);
+                        }, 0)
+                        : 0;
+                    const totalVotes = isMultiQuestion ? multiVotes : legacyVotes;
+                    const multiOptionCount = isMultiQuestion
+                        ? poll.questions.reduce((sum, q) => sum + (q.options?.length || 0), 0)
+                        : 0;
+                    const optionCount = isMultiQuestion ? multiOptionCount : poll.options.length;
                     const isExpired = poll.expiresAt && new Date(poll.expiresAt) < new Date();
                     return {
                         id: poll.id,
@@ -171,7 +193,9 @@ export const getAdminPolls = async (req, res) => {
                         createdAt: poll.createdAt,
                         expiresAt: poll.expiresAt,
                         totalVotes,
-                        optionCount: poll.options.length,
+                        optionCount,
+                        isMultiQuestion,
+                        questionCount: poll.questions?.length || 0,
                         status: isExpired ? 'Expired' : 'Active',
                         creator: poll.creator,
                     };

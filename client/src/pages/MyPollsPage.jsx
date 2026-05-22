@@ -185,15 +185,19 @@ function MyPollsPage() {
               </div>
 
               {/* Poll Stats */}
-              <div className="flex items-center gap-3 text-xs text-gray-400 mb-3">
+              <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mb-3">
                 <span className="flex items-center gap-1">
                   <Users size={12} />
-                  {poll.totalVotes} votes
+                  {poll.totalVotes} {poll.totalVotes === 1 ? "response" : "responses"}
                 </span>
-                <span className="flex items-center gap-1">
-                  <Vote size={12} />
-                  {poll.optionCount} options
-                </span>
+                {poll.isMultiQuestion ? (
+                  <span className="badge badge-brand text-[10px]">{poll.questionCount} questions</span>
+                ) : (
+                  <span className="flex items-center gap-1">
+                    <Vote size={12} />
+                    {poll.optionCount} options
+                  </span>
+                )}
               </div>
 
               {/* Dates */}

@@ -215,14 +215,19 @@ export default function PollsPage() {
               <div key={poll.id} className="card p-4 text-left group animate-fade-in-up flex flex-col" style={{ animationDelay: `${index * 40}ms` }}>
                 <div className="flex items-start justify-between gap-2 mb-3">
                   <span className={`badge text-[10px] ${poll.status === "Active" ? "badge-success" : "badge-neutral"}`}>{poll.status}</span>
+                  {poll.isMultiQuestion && (
+                    <span className="badge badge-brand text-[10px]">{poll.questionCount} questions</span>
+                  )}
                 </div>
                 <h3
                   onClick={() => navigate(`/poll/${poll.voteId}`)}
                   className="text-sm font-semibold text-gray-900 mb-3 leading-snug line-clamp-2 group-hover:text-brand-600 transition-colors cursor-pointer"
                 >{poll.question}</h3>
                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-gray-400 mb-4">
-                  <span className="flex items-center gap-1"><Users size={12} /> {poll.totalVotes} votes</span>
-                  <span className="flex items-center gap-1"><Vote size={12} /> {poll.optionCount} choices</span>
+                  <span className="flex items-center gap-1"><Users size={12} /> {poll.totalVotes} {poll.totalVotes === 1 ? "response" : "responses"}</span>
+                  {!poll.isMultiQuestion && (
+                    <span className="flex items-center gap-1"><Vote size={12} /> {poll.optionCount} choices</span>
+                  )}
                   <span className="flex items-center gap-1 sm:ml-auto"><Clock size={12} /> {formatDate(poll.createdAt)}</span>
                 </div>
                 <div className="flex gap-2 mt-auto pt-3 border-t border-gray-100">

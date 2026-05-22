@@ -218,7 +218,36 @@ router.post('/register', authLimiter, registerValidation, handleValidationErrors
  */
 router.post('/login', authLimiter, loginValidation, handleValidationErrors, login);
 
-// Google OAuth
+/**
+ * @swagger
+ * /auth/google:
+ *   post:
+ *     summary: Sign in with Google
+ *     description: |
+ *       Exchange a Google ID token (from Google Identity Services / FedCM) for a Campus Poll JWT.
+ *       Creates a new account if the email is unknown; otherwise links the Google identity to
+ *       the existing user.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             $ref: '#/components/schemas/GoogleAuthRequest'
+ *     responses:
+ *       200:
+ *         description: Google sign-in successful
+ *         content:
+ *           application/json:
+ *             schema:
+ *               $ref: '#/components/schemas/AuthResponse'
+ *       400:
+ *         description: Missing or invalid credential
+ *       401:
+ *         description: Token expired or invalid
+ *       500:
+ *         description: Google sign-in not configured on the server
+ */
 router.post('/google', authLimiter, googleAuth);
 
 /**
@@ -375,7 +404,38 @@ router.put('/profile', protect, updateProfileValidation, handleValidationErrors,
  */
 router.put('/password', protect, changePasswordValidation, handleValidationErrors, changePassword);
 
-// Promote a user to admin (protected by ADMIN_SECRET env variable)
+/**
+ * @swagger
+ * /auth/promote-admin:
+ *   post:
+ *     summary: Promote a user to admin
+ *     description: |
+ *       Out-of-band admin bootstrap. Requires the server-side `ADMIN_SECRET` env var to be set;
+ *       the request body must include the matching secret. Use this once to promote the first
+ *       admin; subsequent role changes can be done from `/api/admin/users/:id/role`.
+ *     tags: [Authentication]
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             required: [email, secret]
+ *             properties:
+ *               email: { type: string, format: email }
+ *               secret: { type: string, description: 'Value of the server ADMIN_SECRET env var' }
+ *     responses:
+ *       200:
+ *         description: User promoted to admin
+ *       400:
+ *         description: Missing email
+ *       403:
+ *         description: Invalid admin secret
+ *       404:
+ *         description: User not found
+ *       500:
+ *         description: Admin promotion is not configured on this server
+ */
 router.post('/promote-admin', authLimiter, promoteAdmin);
 
 export default router;

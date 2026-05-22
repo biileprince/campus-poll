@@ -111,9 +111,13 @@ export default function HomePage() {
                   <div className="flex items-start justify-between gap-3">
                     <div className="min-w-0 flex-1">
                       <p className="text-sm font-semibold text-gray-900 truncate group-hover:text-brand-600 transition-colors">{poll.question}</p>
-                      <div className="flex items-center gap-3 mt-2.5">
-                        <span className="text-xs text-gray-400">{poll.optionCount} choices</span>
-                        <span className="text-xs text-gray-400">{poll.totalVotes} votes</span>
+                      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 mt-2.5">
+                        {poll.isMultiQuestion ? (
+                          <span className="text-xs text-gray-400">{poll.questionCount} questions</span>
+                        ) : (
+                          <span className="text-xs text-gray-400">{poll.optionCount} choices</span>
+                        )}
+                        <span className="text-xs text-gray-400">{poll.totalVotes} {poll.totalVotes === 1 ? "response" : "responses"}</span>
                         <span className={`badge text-[10px] ${poll.status === "Active" ? "badge-success" : "badge-neutral"}`}>{poll.status}</span>
                       </div>
                     </div>
