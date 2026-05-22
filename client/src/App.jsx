@@ -11,6 +11,11 @@ import HomePage from "./pages/HomePage";
 import LoginPage from "./pages/LoginPage";
 import RegisterPage from "./pages/RegisterPage";
 import MyPollsPage from "./pages/MyPollsPage";
+import AdminLayout from "./pages/AdminLayout";
+import AdminDashboard from "./pages/AdminDashboard";
+import AdminUsers from "./pages/AdminUsers";
+import AdminPolls from "./pages/AdminPolls";
+import ProtectedRoute from "./Components/ProtectedRoute";
 
 export default function App() {
   return (
@@ -30,7 +35,13 @@ export default function App() {
             <Route path="poll/:voteId" element={<VotePage />} />
             <Route path="results/:id" element={<ResultsPage />} />
             <Route path="my-polls" element={<MyPollsPage />} />
+          </Route>
 
+          {/* Admin pages — protected by requireAdmin role */}
+          <Route path="/admin" element={<ProtectedRoute requireAdmin><AdminLayout /></ProtectedRoute>}>
+            <Route index element={<AdminDashboard />} />
+            <Route path="users" element={<AdminUsers />} />
+            <Route path="polls" element={<AdminPolls />} />
           </Route>
         </Routes>
       </BrowserRouter>

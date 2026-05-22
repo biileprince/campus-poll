@@ -1,4 +1,4 @@
-import { Home, Plus, ListChecks, X, User, LogIn, LogOut, FolderOpen, Vote } from "lucide-react";
+import { Home, Plus, ListChecks, X, User, LogIn, LogOut, FolderOpen, Vote, ShieldCheck } from "lucide-react";
 import { NavLink, useNavigate } from "react-router-dom";
 import { useAuth } from "../context/AuthContext";
 
@@ -65,6 +65,12 @@ export default function Sidebar({ isOpen, onClose }) {
           <>
             <p className="px-3 pt-5 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Your Polls</p>
             <NavItem to="/my-polls" icon={FolderOpen} onClick={onClose}>My Polls</NavItem>
+          </>
+        )}
+        {user?.role === "ADMIN" && (
+          <>
+            <p className="px-3 pt-5 pb-1.5 text-[11px] font-semibold text-gray-400 uppercase tracking-wider">Admin</p>
+            <NavItem to="/admin" icon={ShieldCheck} onClick={onClose}>Admin Panel</NavItem>
           </>
         )}
       </nav>

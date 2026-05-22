@@ -253,3 +253,30 @@ export const updateUserRole = async (req, res) => {
         res.status(500).json({ success: false, message: 'Failed to update user role' });
     }
 };
+
+/**
+ * Delete a user (admin only). Their polls are kept but unlinked (creatorId → null
+ * via the schema's onDelete: SetNull rule).
+ * @route DELETE /api/admin/users/:id
+ */
+export const adminDeleteUser = async (req, res) => {
+    try {
+        const { id } = req.params;
+
+        if (id === req.user.id) {
+            return res.status(400).json({ success: false, message: 'You cannot delete your own account from here' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { id } });
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+
+        await prisma.user.delete({ where: { id } });
+
+        res.json({ success: true, message: 'User deleted', deletedUserId: id });
+    } catch (error) {
+        console.error('Admin delete user error:', error);
+        res.status(500).json({ success: false, message: 'Failed to delete user' });
+    }
+};

@@ -7,6 +7,7 @@ import {
     getAdminPolls,
     adminDeletePoll,
     updateUserRole,
+    adminDeleteUser,
 } from '../controllers/adminController.js';
 
 const router = express.Router();
@@ -145,5 +146,30 @@ router.delete('/polls/:id', adminDeletePoll);
  *         description: User not found
  */
 router.put('/users/:id/role', updateUserRole);
+
+/**
+ * @swagger
+ * /admin/users/{id}:
+ *   delete:
+ *     summary: Delete a user
+ *     tags: [Admin]
+ *     security:
+ *       - bearerAuth: []
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema: { type: string }
+ *     responses:
+ *       200:
+ *         description: User deleted
+ *       400:
+ *         description: Cannot delete self
+ *       403:
+ *         description: Admin access required
+ *       404:
+ *         description: User not found
+ */
+router.delete('/users/:id', adminDeleteUser);
 
 export default router;
